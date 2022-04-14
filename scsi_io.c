@@ -97,7 +97,7 @@ void scsi_io_close(void) {
 }
 
 int scsi_io_transfer(const uint8_t *cdb, int cdblen, uint8_t *data, int datalen, char dir) {
-	if (!cdb || cdblen < 1 || cdblen > 16) return 1; /* sanity check for cdb / cdblen */
+	if (!cdb || cdblen < 1 || cdblen > 16) return -1; /* sanity check for cdb / cdblen */
 	if (!data || datalen < 0) datalen = 0; /* sanity check for datalen */
 	
 #ifdef WIN32 /* Windows */
