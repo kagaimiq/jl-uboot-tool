@@ -56,12 +56,12 @@
 ====================================================
 
 @@ Write memory
-  <= fb 06 AA-aa-aa-aa SS-ss ~~ CC-cc ~~ ~~ ~~ ~~ ~~
+  <= fb 06 AA-aa-aa-aa SS-ss ~~ cc-CC ~~ ~~ ~~ ~~ ~~
   <- DD...
 
   AAaaaaaa = address
   SSss = size
-  CCcc = CRC16 of data
+  ccCC = CRC16 of data
   DD... = data, `SSss` bytes
 
 ====================================================
