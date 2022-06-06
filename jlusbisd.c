@@ -98,7 +98,7 @@ int jlUsbIsd_WriteFlash(uint32_t addr, void *data, uint16_t len) {
 	}
 	
 	if (cnt != len) {
-		printf("[%s] we have different data length !! %d != %d\n",
+		printf("[%s] we have different data length >>> %d != %d\n",
 			__func__, cnt, len);
 	}
 
@@ -125,7 +125,7 @@ int jlUsbIsd_ReadFlash(uint32_t addr, void *data, uint16_t len) {
 	}
 	
 	if (cnt != len) {
-		printf("[%s] we have different data length !! %d != %d\n",
+		printf("[%s] we have different data length >>> %d != %d\n",
 			__func__, cnt, len);
 	}
 
@@ -157,7 +157,7 @@ int jlUsbIsd_WriteMemory(uint32_t addr, void *data, uint16_t len) {
 	}
 	
 	if (cnt != len) {
-		printf("[%s] we have different data length !! %d != %d\n",
+		printf("[%s] we have different data length >>> %d != %d\n",
 			__func__, cnt, len);
 	}
 
@@ -184,7 +184,7 @@ int jlUsbIsd_ReadMemory(uint32_t addr, void *data, uint16_t len) {
 	}
 	
 	if (cnt != len) {
-		printf("[%s] we have different data length !! %d != %d\n",
+		printf("[%s] we have different data length >>> %d != %d\n",
 			__func__, cnt, len);
 	}
 
