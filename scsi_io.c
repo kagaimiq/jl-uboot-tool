@@ -167,6 +167,7 @@ int scsi_io_transfer(const uint8_t *cdb, int cdblen, uint8_t *data, int datalen,
 		return -1;
 	}
 	
-	return ioHdr.dxfer_len - ioHdr.resid;
+	//NOTE: jieli seems to set resid the same as the dxfer_len!!
+	return ioHdr.dxfer_len; // - ioHdr.resid;
 #endif
 }
