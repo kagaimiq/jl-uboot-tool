@@ -1,0 +1,8 @@
+# build files
+*.o
+JLDFUTool
+
+# dev files
+*.swp
+*.bin
+
