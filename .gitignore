@@ -1,6 +1,7 @@
 # build files
 *.o
 JLDFUTool
+JL*er
 
 # dev files
 *.swp
