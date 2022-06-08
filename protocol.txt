@@ -92,7 +92,7 @@
   The WDT is running so you need to either disable it or feed it,
     otherwise the system will reset.
 
-  By the way, you can return from your program back into the bootrom!
+  The response to this SCSI request is sent after the your program returns.
 
 ====================================================
 
