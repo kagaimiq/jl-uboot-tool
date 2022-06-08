@@ -85,6 +85,15 @@
       set to the 'type' arg of 'wr' cmd in ISD Download 3.5.0.9 (AC692X SDK)
         (1 = Flash, 7 = OTP)
 
+   << At least for AC692N's BootROM >>
+  The code is called with the R0 set to pointer for "arglist",
+    where the uint16_t at offset 0x0C is the passed argument.
+
+  The WDT is running so you need to either disable it or feed it,
+    otherwise the system will reset.
+
+  By the way, you can return from your program back into the bootrom!
+
 ====================================================
 
 @@ Get chip key
