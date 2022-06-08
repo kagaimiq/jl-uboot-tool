@@ -1,5 +1,7 @@
 # build files
 *.o
+
+jlUsbIsdTest
 JLDFUTool
 JL*er
 
