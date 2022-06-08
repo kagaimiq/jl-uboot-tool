@@ -4,11 +4,6 @@ OBJS = scsi_io.o jlusbisd.o jl_stuff.o
 CFLAGS = -Werror
 LDFLAGS =
 
-#when compiling for Windows, uncomment this
-#LDFLAGS += -s -static
-#OBJS += mizudec2.o
-# also if you cross-compiling, set the CROSS_COMPILE to e.g. 'i686-w64-mingw32-'
-
 ifeq ($(TARGET), jlUsbIsdTest)
 OBJS += test.o
 endif
@@ -25,9 +20,7 @@ ifeq ($(TARGET), JLRunner)
 OBJS += jlrunner.o
 endif
 
-
 CC      = $(CROSS_COMPILE)gcc
-WINDRES = $(CROSS_COMPILE)windres
 
 all: $(TARGET) 
 
@@ -39,6 +32,3 @@ clean:
 
 $(TARGET): $(OBJS)
 	$(CC) $(OBJS) $(LDFLAGS) -o "$@"
-
-%.o: %.res
-	$(WINDRES) "$<" "$@"
