@@ -12,6 +12,10 @@ ifeq ($(TARGET), JLDFUTool)
 OBJS += jldfutool.o
 endif
 
+ifeq ($(TARGET), JLFlasher)
+OBJS += jlflasher.o
+endif
+
 ifeq ($(TARGET), JLRunner)
 OBJS += jlrunner.o
 endif
