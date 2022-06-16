@@ -246,8 +246,8 @@ int JLFlashErase(uint32_t addr, int len) {
 	
 	while (len > 0) {
 		int blksz = 0x10000;
-		if ((addr & 0xf000) || (len < 0x10000))
-			blksz = 0x1000;
+		//if ((addr & 0xf000) || (len < 0x10000))
+		//	blksz = 0x1000;
 		
 		uint32_t baddr = addr & ~(blksz-1);
 		int      boffs = addr &  (blksz-1);
