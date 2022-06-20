@@ -1,42 +1,44 @@
-******************* JieLi USB ISD protocol *******************
+**************** JieLi UBOOT (USB) protocol ******************
 <= denotes command transfer (data is put into CDB)
 <- denotes host-to-device data transfer
 -> denotes device-to-host data transfer
 
-~~ means don't care
+-- means don't care
 
 --------------------------------------------------------------
 
-@@ whatever (BR25 ISD)
-  <- f5 -- -- -- -- -- -- -- -- -- -- -- -- -- -- --
+@@ whatever (BR25 UBOOT)
+  <= f5 -- -- -- -- -- -- -- -- -- -- -- -- -- -- --
   -> AA...
   
   AA... = 256 bytes of something
 
+====================================================
+
 @@ Erase flash block (64k)
-  <= fb 00 AA-aa-aa-aa ~~ ~~ ~~ ~~ ~~ ~~ ~~ ~~ ~~ ~~
-  -> fb 00 ~~ ~~ ~~ ~~ ~~ ~~ ~~ ~~ ~~ ~~ ~~ ~~ ~~ ~~
+  <= fb 00 AA-aa-aa-aa -- -- -- -- -- -- -- -- -- --
+  -> fb 00 -- -- -- -- -- -- -- -- -- -- -- -- -- --
   
   AAaaaaaa = address
 
 ====================================================
 
 @@ Erase flash sector (4k)
-  <= fb 01 AA-aa-aa-aa ~~ ~~ ~~ ~~ ~~ ~~ ~~ ~~ ~~ ~~
-  -> fb 01 ~~ ~~ ~~ ~~ ~~ ~~ ~~ ~~ ~~ ~~ ~~ ~~ ~~ ~~
+  <= fb 01 AA-aa-aa-aa -- -- -- -- -- -- -- -- -- --
+  -> fb 01 -- -- -- -- -- -- -- -- -- -- -- -- -- --
 
   AAaaaaaa = address
 
 ====================================================
 
 @@ Erase flash chip
-  <= fb 02 ~~ ~~ ~~ ~~ ~~ ~~ ~~ ~~ ~~ ~~ ~~ ~~ ~~ ~~
-  -> fb 02 ~~ ~~ ~~ ~~ ~~ ~~ ~~ ~~ ~~ ~~ ~~ ~~ ~~ ~~
+  <= fb 02 -- -- -- -- -- -- -- -- -- -- -- -- -- --
+  -> fb 02 -- -- -- -- -- -- -- -- -- -- -- -- -- --
 
 ====================================================
 
 @@ Write flash
-  <= fb 04 AA-aa-aa-aa SS-ss ~~ ~~ ~~ ~~ ~~ ~~ ~~ ~~
+  <= fb 04 AA-aa-aa-aa SS-ss -- -- -- -- -- -- -- --
   <- DD...
   
   AAaaaaaa = address
@@ -46,7 +48,7 @@
 ====================================================
 
 @@ Read flash
-  <= fd 05 AA-aa-aa-aa SS-ss ~~ ~~ ~~ ~~ ~~ ~~ ~~ ~~
+  <= fd 05 AA-aa-aa-aa SS-ss -- -- -- -- -- -- -- --
   -> DD...
   
   AAaaaaaa = address
@@ -56,7 +58,7 @@
 ====================================================
 
 @@ Write memory
-  <= fb 06 AA-aa-aa-aa SS-ss ~~ cc-CC ~~ ~~ ~~ ~~ ~~
+  <= fb 06 AA-aa-aa-aa SS-ss -- cc-CC -- -- -- -- --
   <- DD...
 
   AAaaaaaa = address
@@ -67,7 +69,7 @@
 ====================================================
 
 @@ Read memory
-  <= fd 07 AA-aa-aa-aa SS-ss ~~ ~~ ~~ ~~ ~~ ~~ ~~ ~~
+  <= fd 07 AA-aa-aa-aa SS-ss -- -- -- -- -- -- -- --
   -> DD...
 
   AAaaaaaa = address
@@ -76,8 +78,8 @@
 ====================================================
 
 @@ Jump to memory location
-  <= fb 08 AA-aa-aa-aa BB-bb ~~ ~~ ~~ ~~ ~~ ~~ ~~ ~~
-  -> fb 08 ~~ ~~ ~~ ~~ ~~ ~~ ~~ ~~ ~~ ~~ ~~ ~~ ~~ ~~
+  <= fb 08 AA-aa-aa-aa BB-bb -- -- -- -- -- -- -- --
+  -> fb 08 -- -- -- -- -- -- -- -- -- -- -- -- -- --
 
   AAaaaaaa = address
   BBbb = whatever (argument?)
@@ -97,17 +99,17 @@
 ====================================================
 
 @@ Get chip key
-  <= fc 09 AA-aa-aa-aa ~~ ~~ ~~ ~~ ~~ ~~ ~~ ~~ ~~ ~~
-  -> fc 09 ?? ?? ?? ?? KK-kk ?? ?? ?? ?? ?? ?? ?? ??
+  <= fc 09 AA-aa-aa-aa -- -- -- -- -- -- -- -- -- --
+  -> fc 09 -- -- -- -- KK-kk -- -- -- -- -- -- -- --
   
-  AAaaaaaa = whatever (0xAC6900 for AC69XX)
+  AAaaaaaa = whatever (0xAC6900 for AC69XX, but seems to be not needed)
   KKkk = chip key
 
 ====================================================
 
 @@ Get device status (Get online device)
-  <= fc 0a ff ff ff ff ff ff ff ff ff ff ff ff ff ff
-  -> fc 0a AA ?? bb-bb-bb-BB ?? ?? ?? ?? ?? ?? ?? ??
+  <= fc 0a -- -- -- -- -- -- -- -- -- -- -- -- -- --
+  -> fc 0a AA -- bb-bb-bb-BB -- -- -- -- -- -- -- --
   
   AA = device type
         0  - no device
@@ -129,16 +131,16 @@
 ====================================================
 
 @@ Reset
-  <= fc 0c AA-aa-aa-aa ~~ ~~ ~~ ~~ ~~ ~~ ~~ ~~ ~~ ~~
-  -> fc 0c ~~ ~~ ~~ ~~ ~~ ~~ ~~ ~~ ~~ ~~ ~~ ~~ ~~ ~~
+  <= fc 0c AA-aa-aa-aa -- -- -- -- -- -- -- -- -- --
+  -> fc 0c -- -- -- -- -- -- -- -- -- -- -- -- -- --
   
   AAaaaaaa = whatever (set to 1 in isd download)
 
 ====================================================
 
 @@ Get flash CRC16
-  <= fc 13 AA-aa-aa-aa SS-ss ~~ ~~ ~~ ~~ ~~ ~~ ~~ ~~
-  -> fc 13 CC-cc ~~ ~~ ~~ ~~ ~~ ~~ ~~ ~~ ~~ ~~ ~~ ~~
+  <= fc 13 AA-aa-aa-aa SS-ss -- -- -- -- -- -- -- --
+  -> fc 13 CC-cc -- -- -- -- -- -- -- -- -- -- -- --
   
   AAaaaaaa = address
   SSss = size
@@ -147,8 +149,8 @@
 ====================================================
 
 @@ Get max flash page size
-  <= fc 14 ~~ ~~ ~~ ~~ ~~ ~~ ~~ ~~ ~~ ~~ ~~ ~~ ~~ ~~
-  -> fc 14 SS-ss-ss-ss ~~ ~~ ~~ ~~ ~~ ~~ ~~ ~~ ~~ ~~
+  <= fc 14 -- -- -- -- -- -- -- -- -- -- -- -- -- --
+  -> fc 14 SS-ss-ss-ss -- -- -- -- -- -- -- -- -- --
   
   SSssssss = flash max page size (maximum amout of data you can read/write at a time)
 
