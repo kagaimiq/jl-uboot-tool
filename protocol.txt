@@ -82,19 +82,25 @@
   -> fb 08 -- -- -- -- -- -- -- -- -- -- -- -- -- --
 
   AAaaaaaa = address
-  BBbb = whatever (argument?)
+  BBbb = argument -
       set to 17 in ISD Download 3.2.3.3 (AC690X SDK);
       set to the 'type' arg of 'wr' cmd in ISD Download 3.5.0.9 (AC692X SDK)
         (1 = Flash, 7 = OTP)
 
-   << At least for AC692N's BootROM >>
-  The code is called with the R0 set to pointer for "arglist",
-    where the uint16_t at offset 0x0C is the passed argument.
+  The code is called with the R0 set to pointer of "arglist", which is defined as follows:
+        struct JieLi_LoaderArgs {
+                void (*msd_send)(void *ptr, int len);           // send request data
+                void (*msd_recv)(void *ptr, int len);           // receive request data
+                void (**msd_hook)(struct usb_msc_cbw *cbw);     // SCSI request hook
+                uint32_t arg;           // Argument
+                uint32_t wtw_10;        // set to zero?!
+        };
 
   The WDT is running so you need to either disable it or feed it,
     otherwise the system will reset.
 
-  The response to this SCSI request is sent after the your program returns.
+  The response to this SCSI request is sent after the your program returns,
+    and if you set the SCSI request hook, then *ALL* requests will end up there!
 
 ====================================================
 
