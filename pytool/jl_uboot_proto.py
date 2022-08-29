@@ -135,7 +135,7 @@ def hexdump(data, width=16):
         print(s)
     print()
 
-#######################
+################################################################################
 
 scsi = None
 
@@ -186,21 +186,6 @@ for ntry in range(2, -1, -1):
 ################################################################################
 
 with scsi:
-    print("Kagamii")
-
-    ###############################################################################################
-
-    def JL_flash_eraseSector(addr):
-        res = scsi.xfer_fromdev(b'\xfb\x01' + addr.to_bytes(4, 'big'), 16)
-        assert(res[:2] == b'\xfb\x01')
-
-    def JL_flash_write(addr, data):
-        scsi.xfer_todev(b'\xfb\x04' + addr.to_bytes(4, 'big') + len(data).to_bytes(2, 'big'),
-                        data)
-
-    def JL_flash_read(addr, len):
-        return scsi.xfer_fromdev(b'\xfd\x05' + addr.to_bytes(4, 'big') + len.to_bytes(2, 'big'), len)
-
     def JL_mem_write(addr, data):
         scsi.xfer_todev(b'\xfb\x06' + addr.to_bytes(4, 'big') + len(data).to_bytes(2, 'big') +
                         b'\x00' + jl_crc16(data).to_bytes(2, 'little'), data)
@@ -212,11 +197,7 @@ with scsi:
         res = scsi.xfer_fromdev(b'\xfb\x08' + addr.to_bytes(4, 'big') + arg.to_bytes(2, 'big'), 16)
         assert(res[:2] == b'\xfb\x08')
 
-
-
-    #https://nitter.42l.fr/whitequark/status/1139284289105924097
-    #https://cloud.whitequark.org/s/WPMSZM7CrbT6Gde/download
-
+    #-------------------------------------------------------
 
     with open(sys.argv[2], 'rb') as f:
         JL_mem_write(0x12000, jl_cryptcrc(f.read()))
@@ -224,29 +205,3 @@ with scsi:
 
         data = jl_cryptcrc(JL_mem_read(0x20000, 0x4000))
         sys.stdout.buffer.write(data[2:2+int.from_bytes(data[:2], 'little')])
-
-
-    #-------------------------------------------------------
-
-
-
-    '''
-    with open('br21loader.bin', 'rb') as f:
-        JL_mem_write(0x2000, f.read())
-        JL_mem_call(0x2000, 1)
-
-    #JL_flash_eraseSector(0)
-    #JL_flash_write(0x20, b'<Kagami Hiiragi>')
-    #JL_flash_write(0x40, b'<<Konata Izumi>>')
-    hexdump(JL_flash_read(0, 0x100))
-
-    with open(sys.argv[2], 'rb') as f:
-        i = 0
-        while True:
-            dat = f.read(4096)
-            if len(dat) == 0: break
-            print('%06x' % i)
-            JL_flash_eraseSector(i)
-            JL_flash_write(i, dat)
-            i += 4096
-    '''
