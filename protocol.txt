@@ -91,7 +91,7 @@
         struct JieLi_LoaderArgs {
                 void (*msd_send)(void *ptr, int len);           // send request data
                 void (*msd_recv)(void *ptr, int len);           // receive request data
-                void (**msd_hook)(struct usb_msc_cbw *cbw);     // SCSI request hook
+                int (**msd_hook)(struct usb_msc_cbw *cbw);      // SCSI request hook
                 uint32_t arg;           // Argument
                 uint32_t wtw_10;        // set to zero?!
         };
