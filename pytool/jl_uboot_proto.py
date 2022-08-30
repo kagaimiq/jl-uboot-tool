@@ -202,6 +202,3 @@ with scsi:
     with open(sys.argv[2], 'rb') as f:
         JL_mem_write(0x12000, jl_cryptcrc(f.read()))
         JL_mem_call(0x12000)
-
-        data = jl_cryptcrc(JL_mem_read(0x20000, 0x4000))
-        sys.stdout.buffer.write(data[2:2+int.from_bytes(data[:2], 'little')])
