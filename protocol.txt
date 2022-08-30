@@ -6,6 +6,59 @@
 -- means don't care
 
 --------------------------------------------------------------
+                     Base protocol
+
+@@ Write memory
+  <= fb 06 AA-aa-aa-aa SS-ss -- cc-CC -- -- -- -- --
+  <- DD...
+
+  AAaaaaaa = address
+  SSss = size
+  ccCC = CRC16 of data
+  DD... = data, `SSss` bytes
+
+====================================================
+
+@@ Read memory
+  <= fd 07 AA-aa-aa-aa SS-ss -- -- -- -- -- -- -- --
+  -> DD...
+
+  AAaaaaaa = address
+  DD... = data, `SSss` bytes
+
+====================================================
+
+@@ Jump to memory location
+  <= fb 08 AA-aa-aa-aa BB-bb -- -- -- -- -- -- -- --
+  -> fb 08 -- -- -- -- -- -- -- -- -- -- -- -- -- --
+
+  AAaaaaaa = address
+  BBbb = argument -
+      set to 17 in ISD Download 3.2.3.3 (AC690X SDK);
+      set to the 'type' arg of 'wr' cmd in ISD Download 3.5.0.9 (AC692X SDK)
+        (1 = Flash, 7 = OTP)
+
+  The code is called with the R0 set to pointer of "arglist", which is defined as follows:
+        struct JieLi_LoaderArgs {
+                int (*msd_send)(void *ptr, int len);            // send request data
+                int (*msd_recv)(void *ptr, int len);            // receive request data
+                int (**msd_hook)(struct usb_msc_cbw *cbw);      // SCSI request hook
+                uint32_t arg;           // Argument
+                uint32_t wtw_10;        // set to zero?!
+        };
+
+  The WDT is running so you need to either disable it or feed it,
+    otherwise the system will reset.
+
+  The response to this SCSI request is sent after the your program returns,
+    and if you set the SCSI hook, then it will now handle *ALL* requests *first* -
+      if you handled it, then you return a nonzero,
+      otherwise you return zero and it will be processed
+      by the thing that runs this protocol....
+
+--------------------------------------------------------------
+                    Loader protocol
+
 
 @@ whatever (BR25 UBOOT)
   <= f5 -- -- -- -- -- -- -- -- -- -- -- -- -- -- --
@@ -57,58 +110,11 @@
 
 ====================================================
 
-@@ Write memory
-  <= fb 06 AA-aa-aa-aa SS-ss -- cc-CC -- -- -- -- --
-  <- DD...
-
-  AAaaaaaa = address
-  SSss = size
-  ccCC = CRC16 of data
-  DD... = data, `SSss` bytes
-
-====================================================
-
-@@ Read memory
-  <= fd 07 AA-aa-aa-aa SS-ss -- -- -- -- -- -- -- --
-  -> DD...
-
-  AAaaaaaa = address
-  DD... = data, `SSss` bytes
-
-====================================================
-
-@@ Jump to memory location
-  <= fb 08 AA-aa-aa-aa BB-bb -- -- -- -- -- -- -- --
-  -> fb 08 -- -- -- -- -- -- -- -- -- -- -- -- -- --
-
-  AAaaaaaa = address
-  BBbb = argument -
-      set to 17 in ISD Download 3.2.3.3 (AC690X SDK);
-      set to the 'type' arg of 'wr' cmd in ISD Download 3.5.0.9 (AC692X SDK)
-        (1 = Flash, 7 = OTP)
-
-  The code is called with the R0 set to pointer of "arglist", which is defined as follows:
-        struct JieLi_LoaderArgs {
-                void (*msd_send)(void *ptr, int len);           // send request data
-                void (*msd_recv)(void *ptr, int len);           // receive request data
-                int (**msd_hook)(struct usb_msc_cbw *cbw);      // SCSI request hook
-                uint32_t arg;           // Argument
-                uint32_t wtw_10;        // set to zero?!
-        };
-
-  The WDT is running so you need to either disable it or feed it,
-    otherwise the system will reset.
-
-  The response to this SCSI request is sent after the your program returns,
-    and if you set the SCSI request hook, then *ALL* requests will end up there!
-
-====================================================
-
 @@ Get chip key
   <= fc 09 AA-aa-aa-aa -- -- -- -- -- -- -- -- -- --
   -> fc 09 -- -- -- -- KK-kk -- -- -- -- -- -- -- --
   
-  AAaaaaaa = whatever (0xAC6900 for AC69XX, but seems to be not needed)
+  AAaaaaaa = whatever (0xAC6900 for AC69XX, but seems to be not required)
   KKkk = chip key
 
 ====================================================
