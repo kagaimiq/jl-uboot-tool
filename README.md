@@ -1,9 +1,8 @@
-# jl-dfu-tool
+# jl-uboot-tool
 
-Contrary to its name this is not what you see right now... Sorry...
+Everything about the JieLi's UBOOT (or maybe download/update, haven't decided yet) mode.
 
-After many months, nothing changed.
-MStar and Mediatek were still convincing me that they are more valuable.
-Had I ever touched my AC6965A bluetooth board yet?
+## Information
 
-I don't know how to deal with it.
+- [How to enter UBOOT mode](enter-uboot-mode.md)
+- [Protocol description](protocol.md)

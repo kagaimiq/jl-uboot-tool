@@ -1,13 +1,10 @@
-**************** JieLi UBOOT (USB) protocol ******************
-<= denotes command transfer (data is put into CDB)
-<- denotes host-to-device data transfer
--> denotes device-to-host data transfer
+# JieLi UBOOT protocol description
 
--- means don't care
+## USB
 
---------------------------------------------------------------
-                     Base protocol
+### Base protocol
 
+```
 @@ Write memory
   <= fb 06 AA-aa-aa-aa SS-ss -- cc-CC -- -- -- -- --
   <- DD...
@@ -55,11 +52,11 @@
       if you handled it, then you return a nonzero,
       otherwise you return zero and it will be processed
       by the thing that runs this protocol....
+```
 
---------------------------------------------------------------
-                    Loader protocol
+### Loader protocol
 
-
+```
 @@ whatever (BR25 UBOOT)
   <= f5 -- -- -- -- -- -- -- -- -- -- -- -- -- -- --
   -> AA...
@@ -167,3 +164,4 @@
   SSssssss = flash max page size (maximum amout of data you can read/write at a time)
 
 --------------------------------------------------------------
+```
