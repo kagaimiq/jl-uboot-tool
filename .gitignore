@@ -1,11 +1,4 @@
-# build files
-*.o
+__pycache__
+*.pyc
 
-jlUsbIsdTest
-JLDFUTool
-JL*er
-
-# dev files
-*.swp
 *.bin
-

@@ -1,10 +1,46 @@
-# JieLi UBOOT protocol description
 
-## USB
+@@ Erase flash block (64k)
+  <= fb 00 AA-aa-aa-aa -- -- -- -- -- -- -- -- -- --
+  -> fb 00 -- -- -- -- -- -- -- -- -- -- -- -- -- --
+  
+  AAaaaaaa = address
 
-### Base protocol
+====================================================
 
-```
+@@ Erase flash sector (4k)
+  <= fb 01 AA-aa-aa-aa -- -- -- -- -- -- -- -- -- --
+  -> fb 01 -- -- -- -- -- -- -- -- -- -- -- -- -- --
+
+  AAaaaaaa = address
+
+====================================================
+
+@@ Erase flash chip
+  <= fb 02 -- -- -- -- -- -- -- -- -- -- -- -- -- --
+  -> fb 02 -- -- -- -- -- -- -- -- -- -- -- -- -- --
+
+====================================================
+
+@@ Write flash
+  <= fb 04 AA-aa-aa-aa SS-ss -- -- -- -- -- -- -- --
+  <- DD...
+  
+  AAaaaaaa = address
+  SSss = size
+  DD... = data, `SSss` bytes
+
+====================================================
+
+@@ Read flash
+  <= fd 05 AA-aa-aa-aa SS-ss -- -- -- -- -- -- -- --
+  -> DD...
+  
+  AAaaaaaa = address
+  SSss = size
+  DD... = data, `SSss` bytes
+
+====================================================
+
 @@ Write memory
   <= fb 06 AA-aa-aa-aa SS-ss -- cc-CC -- -- -- -- --
   <- DD...
@@ -52,58 +88,14 @@
       if you handled it, then you return a nonzero,
       otherwise you return zero and it will be processed
       by the thing that runs this protocol....
-```
 
-### Loader protocol
+====================================================
 
-```
 @@ whatever (BR25 UBOOT)
   <= f5 -- -- -- -- -- -- -- -- -- -- -- -- -- -- --
   -> AA...
   
   AA... = 256 bytes of something
-
-====================================================
-
-@@ Erase flash block (64k)
-  <= fb 00 AA-aa-aa-aa -- -- -- -- -- -- -- -- -- --
-  -> fb 00 -- -- -- -- -- -- -- -- -- -- -- -- -- --
-  
-  AAaaaaaa = address
-
-====================================================
-
-@@ Erase flash sector (4k)
-  <= fb 01 AA-aa-aa-aa -- -- -- -- -- -- -- -- -- --
-  -> fb 01 -- -- -- -- -- -- -- -- -- -- -- -- -- --
-
-  AAaaaaaa = address
-
-====================================================
-
-@@ Erase flash chip
-  <= fb 02 -- -- -- -- -- -- -- -- -- -- -- -- -- --
-  -> fb 02 -- -- -- -- -- -- -- -- -- -- -- -- -- --
-
-====================================================
-
-@@ Write flash
-  <= fb 04 AA-aa-aa-aa SS-ss -- -- -- -- -- -- -- --
-  <- DD...
-  
-  AAaaaaaa = address
-  SSss = size
-  DD... = data, `SSss` bytes
-
-====================================================
-
-@@ Read flash
-  <= fd 05 AA-aa-aa-aa SS-ss -- -- -- -- -- -- -- --
-  -> DD...
-  
-  AAaaaaaa = address
-  SSss = size
-  DD... = data, `SSss` bytes
 
 ====================================================
 
@@ -163,5 +155,3 @@
   
   SSssssss = flash max page size (maximum amout of data you can read/write at a time)
 
---------------------------------------------------------------
-```

@@ -186,6 +186,24 @@ for ntry in range(2, -1, -1):
 ################################################################################
 
 with scsi:
+    def JL_flash_eraseBlock(addr):
+        res = scsi.xfer_fromdev(b'\xfb\x00' + addr.to_bytes(4, 'big'), 16)
+        assert(res[:2] == b'\xfb\x00')
+
+    def JL_flash_eraseSector(addr):
+        res = scsi.xfer_fromdev(b'\xfb\x01' + addr.to_bytes(4, 'big'), 16)
+        assert(res[:2] == b'\xfb\x01')
+
+    def JL_flash_eraseChip():
+        res = scsi.xfer_fromdev(b'\xfb\x02\x00\x00\x00\x00', 16)
+        assert(res[:2] == b'\xfb\x02')
+
+    def JL_flash_program(addr, data):
+        scsi.xfer_todev(b'\xfb\x04' + addr.to_bytes(4, 'big') + len(data).to_bytes(2, 'big'), data)
+
+    def JL_flash_read(addr, len):
+        return scsi.xfer_fromdev(b'\xfd\x05' + addr.to_bytes(4, 'big') + len.to_bytes(2, 'big'), len)
+
     def JL_mem_write(addr, data):
         scsi.xfer_todev(b'\xfb\x06' + addr.to_bytes(4, 'big') + len(data).to_bytes(2, 'big') +
                         b'\x00' + jl_crc16(data).to_bytes(2, 'little'), data)
@@ -202,3 +220,19 @@ with scsi:
     with open(sys.argv[2], 'rb') as f:
         JL_mem_write(0x12000, jl_cryptcrc(f.read()))
         JL_mem_call(0x12000)
+
+    #hexdump(JL_flash_read(0, 0x100))
+
+    hexdump(scsi.xfer_fromdev(b'\xe4\x03\x00\x00\x00\x00', 256))
+
+    JL_flash_eraseChip()
+
+    with open('/home/kagaimiq/Desktop/JieLi/00!@FiwmareDumps/JL_MODULE_HW770-_V0.2_ac6965a.bin', 'rb') as f:
+        addr = 0
+        while True:
+            rd = f.read(0x1000)
+            if len(rd) < 1: break
+
+            JL_flash_program(addr, rd)
+
+            addr += len(rd)
