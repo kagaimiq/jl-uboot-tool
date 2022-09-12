@@ -1,6 +1,30 @@
-import crcmod
+#####################################
+# Common JieLi stuff
+#
 
-jl_crc16 = crcmod.mkCrcFun(0x11021, rev=False, initCrc=0x0000, xorOut=0x0000)
+#=====================================================
+
+try:
+    import crcmod
+
+    jl_crc16 = crcmod.mkCrcFun(0x11021, rev=False, initCrc=0x0000, xorOut=0x0000)
+
+except ImportError:
+    print("Warning: falling back to local jl_crc16 implementation, which is unoptimized.")
+    print("Consider installing the crcmod package to enhance performance.")
+
+    def jl_crc16(data, crc=0):
+        for b in data:
+            crc ^= b << 8
+            for i in range(8):
+                crc = ((crc << 1) ^ (0x1021 if (crc >> 15) else 0)) & 0xffff
+        return crc
+
+#=====================================================
+
+#################################################################
+# The Hyper Secret And The Most Sophisticated Encryption Algos! #
+#################################################################
 
 def jl_crypt(data, key=0xffff):
     data = bytearray(data)
