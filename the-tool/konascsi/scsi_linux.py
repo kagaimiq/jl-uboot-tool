@@ -1,7 +1,3 @@
-##########################################
-# some stuff is stolen from cython-sgio
-#
-
 from konascsi.scsi_common import *
 import os, fcntl, ctypes
 
@@ -51,15 +47,18 @@ SG_INFO_DIRECT_IO      = 0x2
 SG_INFO_MIXED_IO       = 0x4
 
 class SCSI(SCSIbase):
-    """
-    SCSI class implementation for the Linux platform.
-    """
-
     def open(self, path):
         self.fd = os.open(path, os.O_RDWR)
 
+        self.is_open = True
+
     def close(self):
-        os.close(self.fd)
+        if self.is_open:
+            if self.fd is not None:
+                os.close(self.fd)
+                self.fd = None
+
+            self.is_open = False
 
     def execute(self, cdb, data_out, data_in, max_sense_len=32):
         sgio = sg_io_hdr()
@@ -68,8 +67,9 @@ class SCSI(SCSIbase):
         sgio.timeout = 1000 # TODO
 
         #---- Sense
-        #sgio.mx_sb_len = max_sense_len
-        #sgio.sbp       = ctypes.cast(ctypes.create_string_buffer(max_sense_len), ctypes.POINTER(ctypes.c_ubyte))
+        sgio.mx_sb_len = max_sense_len
+        sensebuff = ctypes.create_string_buffer(sgio.mx_sb_len)
+        sgio.sbp = ctypes.cast(sensebuff, ctypes.POINTER(ctypes.c_ubyte))
 
         #---- CDB
         sgio.cmd_len = len(cdb)
@@ -82,12 +82,14 @@ class SCSI(SCSIbase):
         elif data_out:
             sgio.dxfer_direction = SG_DXFER_TO_DEV
             sgio.dxfer_len = len(data_out)
-            sgio.dxferp = ctypes.cast(ctypes.create_string_buffer(data_out), ctypes.POINTER(ctypes.c_ubyte))
+            databuff = ctypes.create_string_buffer(data_out)
+            sgio.dxferp = ctypes.cast(databuff, ctypes.POINTER(ctypes.c_ubyte))
 
         elif data_in:
             sgio.dxfer_direction = SG_DXFER_FROM_DEV
             sgio.dxfer_len = len(data_in)
-            sgio.dxferp = ctypes.cast(ctypes.create_string_buffer(len(data_in)), ctypes.POINTER(ctypes.c_ubyte))
+            databuff = ctypes.create_string_buffer(sgio.dxfer_len)
+            sgio.dxferp = ctypes.cast(databuff, ctypes.POINTER(ctypes.c_ubyte))
 
         else:
             sgio.dxfer_direction = SG_DXFER_NONE
@@ -99,11 +101,11 @@ class SCSI(SCSIbase):
 
         #---- Check
         if sgio.info & SG_INFO_OK_MASK != SG_INFO_OK:
-            raise Exception('Transfer failed...')
+            raise Exception('Transfer failed... info:%x host:%x driver:%x' % (sgio.info, sgio.host_status, sgio.driver_status))
 
-        #---- Get data (TODO)
+        #---- Get data
         if data_in:
-            for i in range(sgio.dxfer_len):
-                data_in[i] = sgio.dxferp[i]
+            inlen = sgio.dxfer_len
+            data_in[:inlen] = bytearray(databuff.raw[:inlen])
 
         return sgio.resid

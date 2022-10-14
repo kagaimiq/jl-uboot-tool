@@ -1,19 +1,20 @@
 class SCSIbase:
-    """
-    SCSI base class. Provides the stuff that is common to all platform classes,
-    including __init__, __enter__, __exit__, etc.
-    """
+    def __init__(self, path=None):
+        self.is_open = False
+        self.path = path
 
-    def __init__(self, path):
-        self.open(path)
+        if path is not None:
+            self.open(path)
 
     def __enter__(self):
+        if (self.path is not None) and (not self.is_open):
+            self.open()
         return self
 
     def __exit__(self, *args, **kwargs):
         self.close()
 
-    # konascsi
+    # konascsi (deprecated!)
     def xfer_fromdev(self, cdb, len):
         data = bytearray(len)
         self.execute(cdb, None, data)

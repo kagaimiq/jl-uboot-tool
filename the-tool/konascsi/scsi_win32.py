@@ -1,7 +1,3 @@
-##########################################
-# some stuff is stolen from pyserial
-#
-
 from konascsi.scsi_common import *
 import ctypes
 
@@ -41,13 +37,13 @@ IOCTL_SCSI_PASS_THROUGH_DIRECT = 0x4d014
 
 #-------------
 
-kernel32        = ctypes.WinDLL('kernel32')
+kernel32 = ctypes.WinDLL('kernel32')
 
-CreateFile      = kernel32.CreateFileW
+CreateFile = kernel32.CreateFileW
 CreateFile.restype  = HANDLE
 CreateFile.argtypes = [LPCWSTR, DWORD, DWORD, LPSECURITY_ATTRIBUTES, DWORD, DWORD, HANDLE]
 
-CloseHandle     = kernel32.CloseHandle
+CloseHandle = kernel32.CloseHandle
 CloseHandle.restype  = BOOL
 CloseHandle.argtypes = [HANDLE]
 
@@ -58,10 +54,6 @@ DeviceIoControl.restype  = BOOL
 #-----------------------------------------------
 
 class SCSI(SCSIbase):
-    """
-    SCSI class implementation for the Win32 platform.
-    """
-
     def open(self, path):
         self.fhandle = CreateFile(path, GENERIC_READ|GENERIC_WRITE,
                              FILE_SHARE_READ|FILE_SHARE_WRITE, 0,
@@ -70,8 +62,15 @@ class SCSI(SCSIbase):
         if self.fhandle == INVALID_HANDLE_VALUE:
             raise Exception('Could not open SCSI device: %s' % ctypes.WinError())
 
+        self.is_open = True
+
     def close(self):
-        CloseHandle(self.fhandle)
+        if self.is_open:
+            if self.fhandle is not None:
+                CloseHandle(self.fhandle)
+                self.fhandle = None
+
+            self.is_open = False
 
     def execute(self, cdb, data_out, data_in, max_sense_len=32):
         sptd = SCSI_PASS_THROUGH_DIRECT()
@@ -98,31 +97,33 @@ class SCSI(SCSIbase):
         elif data_out:
             sptd.dir      = 0
             sptd.data_len = len(data_out)
-            sptd.data_ptr = ctypes.cast(ctypes.create_string_buffer(data_out),
-                                        ctypes.POINTER(BYTE))
+
+            databuff = ctypes.create_string_buffer(data_out)
+            sptd.data_ptr = ctypes.cast(databuff, ctypes.POINTER(BYTE))
 
         elif data_in:
             sptd.dir      = 1
             sptd.data_len = len(data_in)
-            sptd.data_ptr = ctypes.cast(ctypes.create_string_buffer(len(data_in)),
-                                         ctypes.POINTER(BYTE))
+
+            databuff = ctypes.create_string_buffer(sptd.data_len)
+            sptd.data_ptr = ctypes.cast(databuff, ctypes.POINTER(BYTE))
 
         #---- Do transfer
         xlen = DWORD()
 
         sptdp = ctypes.cast(ctypes.addressof(sptd), ctypes.POINTER(BYTE))
-        xlenp = ctypes.cast(ctypes.addressof(xlen), ctypes.POINTER(BYTE))
 
         res = DeviceIoControl(self.fhandle, IOCTL_SCSI_PASS_THROUGH_DIRECT,
-                              sptdp, sptd.len, sptdp, sptd.len, xlenp, 0)
+                              sptdp, sptd.len, ctypes.byref(sptd), sptd.len,
+                              ctypes.byref(xlen), 0)
 
         #---- Check
         if not res:
-            raise Exception('Transfer failed...')
+            raise Exception('Transfer failed... %s' % ctypes.WinError())
 
-        #---- Get data (TODO)
+        #---- Get data
         if data_in:
-            for i in range(sptd.data_len):
-                data_in[i] = sptd.data_ptr[i] & 0xff
+            inlen = sptd.data_len
+            data_in[:inlen] = bytearray(databuff.raw[:inlen])
 
         return 0  #<-- TODO
