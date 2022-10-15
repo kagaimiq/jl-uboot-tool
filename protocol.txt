@@ -1,6 +1,6 @@
 
 @@ Erase flash block (64k)
-  <= fb 00 AA-aa-aa-aa -- -- -- -- -- -- -- -- -- --
+  <= fb 00 AA-aa-aa-aa
   -> fb 00 -- -- -- -- -- -- -- -- -- -- -- -- -- --
   
   AAaaaaaa = address
@@ -8,7 +8,7 @@
 ====================================================
 
 @@ Erase flash sector (4k)
-  <= fb 01 AA-aa-aa-aa -- -- -- -- -- -- -- -- -- --
+  <= fb 01 AA-aa-aa-aa
   -> fb 01 -- -- -- -- -- -- -- -- -- -- -- -- -- --
 
   AAaaaaaa = address
@@ -16,13 +16,13 @@
 ====================================================
 
 @@ Erase flash chip
-  <= fb 02 -- -- -- -- -- -- -- -- -- -- -- -- -- --
+  <= fb 02 -- -- -- -
   -> fb 02 -- -- -- -- -- -- -- -- -- -- -- -- -- --
 
 ====================================================
 
 @@ Write flash
-  <= fb 04 AA-aa-aa-aa SS-ss -- -- -- -- -- -- -- --
+  <= fb 04 AA-aa-aa-aa SS-ss
   <- DD...
   
   AAaaaaaa = address
@@ -32,7 +32,7 @@
 ====================================================
 
 @@ Read flash
-  <= fd 05 AA-aa-aa-aa SS-ss -- -- -- -- -- -- -- --
+  <= fd 05 AA-aa-aa-aa SS-ss
   -> DD...
   
   AAaaaaaa = address
@@ -42,7 +42,7 @@
 ====================================================
 
 @@ Write memory
-  <= fb 06 AA-aa-aa-aa SS-ss -- cc-CC -- -- -- -- --
+  <= fb 06 AA-aa-aa-aa SS-ss -- cc-CC
   <- DD...
 
   AAaaaaaa = address
@@ -50,19 +50,38 @@
   ccCC = CRC16 of data
   DD... = data, `SSss` bytes
 
+NOTE: some families (like BR23 or BR25) accepts the data *encrypted*.
+
+      The original data is loaded into the target address, and then it's decrypted.
+
 ====================================================
 
 @@ Read memory
-  <= fd 07 AA-aa-aa-aa SS-ss -- -- -- -- -- -- -- --
+  <= fd 07 AA-aa-aa-aa SS-ss
   -> DD...
 
   AAaaaaaa = address
   DD... = data, `SSss` bytes
 
+NOTE: some families (like BR23 or BR25) reads out the memory contents *encrypted*.
+
+      And this is done by calling the encryption function on the *TARGET* memory address,
+      sending out that encrypted chunk and finally decrypting it back.
+
+      So, the SRAM will read out as it was intended (i.e. encrypted), BUT
+        some areas (that is used by the ROM's runtine like the stack, data, bss, etc)
+          will be unreadable because after these areas become "corrupted" by encrypting it,
+          the code will lock up, etc. And finally it will reset by the WDT.
+
+        Some areas (like the ROM) won't be encrypted at all,
+
+        And if you try to access the peripheral registers, well, then you might just
+        screw up the entire system at that point....
+
 ====================================================
 
 @@ Jump to memory location
-  <= fb 08 AA-aa-aa-aa BB-bb -- -- -- -- -- -- -- --
+  <= fb 08 AA-aa-aa-aa BB-bb
   -> fb 08 -- -- -- -- -- -- -- -- -- -- -- -- -- --
 
   AAaaaaaa = address
@@ -100,16 +119,16 @@
 ====================================================
 
 @@ Get chip key
-  <= fc 09 AA-aa-aa-aa -- -- -- -- -- -- -- -- -- --
+  <= fc 09 AA-aa-aa-aa
   -> fc 09 -- -- -- -- KK-kk -- -- -- -- -- -- -- --
   
-  AAaaaaaa = whatever (0xAC6900 for AC69XX, but seems to be not required)
-  KKkk = chip key
+  AAaaaaaa = whatever (0xAC6900)
+  KKkk = chip key (encrypted)
 
 ====================================================
 
 @@ Get device status (Get online device)
-  <= fc 0a -- -- -- -- -- -- -- -- -- -- -- -- -- --
+  <= fc 0a -- -- -- --
   -> fc 0a AA -- bb-bb-bb-BB -- -- -- -- -- -- -- --
   
   AA = device type
@@ -132,7 +151,7 @@
 ====================================================
 
 @@ Reset
-  <= fc 0c AA-aa-aa-aa -- -- -- -- -- -- -- -- -- --
+  <= fc 0c AA-aa-aa-aa
   -> fc 0c -- -- -- -- -- -- -- -- -- -- -- -- -- --
   
   AAaaaaaa = whatever (set to 1 in isd download)
@@ -140,7 +159,7 @@
 ====================================================
 
 @@ Get flash CRC16
-  <= fc 13 AA-aa-aa-aa SS-ss -- -- -- -- -- -- -- --
+  <= fc 13 AA-aa-aa-aa SS-ss
   -> fc 13 CC-cc -- -- -- -- -- -- -- -- -- -- -- --
   
   AAaaaaaa = address
@@ -150,7 +169,7 @@
 ====================================================
 
 @@ Get max flash page size
-  <= fc 14 -- -- -- -- -- -- -- -- -- -- -- -- -- --
+  <= fc 14 -- -- -- --
   -> fc 14 SS-ss-ss-ss -- -- -- -- -- -- -- -- -- --
   
   SSssssss = flash max page size (maximum amout of data you can read/write at a time)
