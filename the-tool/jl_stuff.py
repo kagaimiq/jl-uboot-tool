@@ -37,6 +37,7 @@ def jl_cryptcrc(data, key=0xffffffff):
     crc = key & 0xffff
     crc = jl_crc16(bytes([key >> 16 & 0xff, key >> 24 & 0xff]), crc)
 
+    # GB2312 -> "孟黎我爱你，玉林" -- meng li i love you, yulin #
     magic = b'\xc3\xcf\xc0\xe8\xce\xd2\xb0\xae\xc4\xe3\xa3\xac\xd3\xf1\xc1\xd6'
 
     data = bytearray(data)
