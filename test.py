@@ -608,10 +608,9 @@ class DasShell(cmd.Cmd):
 
         maxlen = self.dev.flash_max_page_size()
 
-        while True:
+        while length > 0:
             n = length
             if n > maxlen: n = maxlen
-            if n == 0: break
 
             hexdump(self.dev.flash_read(address, n), address=address)
 
