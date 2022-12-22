@@ -1,7 +1,5 @@
-from konascsi.scsi_common import *
+from scsiio.common import *
 import os, fcntl, ctypes
-
-## See <linux>/include/scsi/sg.h ##
 
 class sg_io_hdr(ctypes.Structure):
     _fields_ = [
@@ -46,7 +44,11 @@ SG_INFO_INDIRECT_IO    = 0x0
 SG_INFO_DIRECT_IO      = 0x2
 SG_INFO_MIXED_IO       = 0x4
 
-class SCSI(SCSIbase):
+class SCSIDev(SCSIDevBase):
+    """
+    SCSI I/O device implementation for Linux's SG_IO ioctl
+    """
+
     def open(self, path):
         self.fd = os.open(path, os.O_RDWR)
 
@@ -60,24 +62,21 @@ class SCSI(SCSIbase):
 
             self.is_open = False
 
-    def execute(self, cdb, data_out, data_in, max_sense_len=32):
+    def execute(self, cdb, data_out, data_in, max_sense_len=32, return_sense_buffer=False):
         sgio = sg_io_hdr()
         sgio.interface_id = SG_INTERFACE_ID_ORIG
 
-        sgio.timeout = 1000 # TODO
+        sgio.timeout = 1000 # TODO ; in milliseconds
 
-        #---- Sense
         sgio.mx_sb_len = max_sense_len
         sensebuff = ctypes.create_string_buffer(sgio.mx_sb_len)
         sgio.sbp = ctypes.cast(sensebuff, ctypes.POINTER(ctypes.c_ubyte))
 
-        #---- CDB
         sgio.cmd_len = len(cdb)
         sgio.cmdp = ctypes.cast(ctypes.create_string_buffer(cdb), ctypes.POINTER(ctypes.c_ubyte))
 
-        #---- Data
         if data_out and data_in:
-            raise NotImplemented('Bidirectional I/O is not supported.')
+            raise NotImplemented('Indirect I/O is not supported')
 
         elif data_out:
             sgio.dxfer_direction = SG_DXFER_TO_DEV
@@ -94,18 +93,23 @@ class SCSI(SCSIbase):
         else:
             sgio.dxfer_direction = SG_DXFER_NONE
 
-        #---- Do transfer
         res = fcntl.ioctl(self.fd, SG_IO, sgio)
         if res < 0:
             raise OSError(res, 'SG_IO ioctl failed')
 
-        #---- Check
         if sgio.info & SG_INFO_OK_MASK != SG_INFO_OK:
-            raise Exception('Transfer failed... info:%x host:%x driver:%x' % (sgio.info, sgio.host_status, sgio.driver_status))
+            msg = 'Transfer failed... info:%x host:%x driver:%x' % (sgio.info, sgio.host_status, sgio.driver_status)
 
-        #---- Get data
+            if sgio.sb_len_wr > 0:
+                msg += '\nSense looks like this:\n' + memoryview(sensebuff.raw[:sgio.sb_len_wr]).hex('.')
+
+            raise SCSIException(msg)
+
         if data_in:
             inlen = sgio.dxfer_len
             data_in[:inlen] = bytearray(databuff.raw[:inlen])
 
-        return sgio.resid
+        if return_sense_buffer:
+            return sgio.resid, sensebuff.raw[:sgio.sb_len_wr]
+        else:
+            return sgio.resid

@@ -1,5 +1,3 @@
 __pycache__
 *.pyc
-
-*.bin
-!br*loader.bin
+*.pyo

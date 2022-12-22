@@ -1,4 +1,4 @@
-from konascsi.scsi_common import *
+from scsiio.common import *
 import ctypes
 
 from ctypes.wintypes import HANDLE, BOOL
@@ -35,6 +35,10 @@ OPEN_EXISTING    = 3
 
 IOCTL_SCSI_PASS_THROUGH_DIRECT = 0x4d014
 
+SCSI_IOCTL_DATA_OUT         = 0
+SCSI_IOCTL_DATA_IN          = 1
+SCSI_IOCTL_DATA_UNSPECIFIED = 2 # maybe?
+
 #-------------
 
 kernel32 = ctypes.WinDLL('kernel32')
@@ -53,7 +57,11 @@ DeviceIoControl.restype  = BOOL
 
 #-----------------------------------------------
 
-class SCSI(SCSIbase):
+class SCSIDev(SCSIDevBase):
+    """
+    SCSI I/O device implementation for Win32's SCSI_PASS_THROUGH_DIRECT ioctl
+    """
+
     def open(self, path):
         self.fhandle = CreateFile(path, GENERIC_READ|GENERIC_WRITE,
                              FILE_SHARE_READ|FILE_SHARE_WRITE, 0,
@@ -72,43 +80,47 @@ class SCSI(SCSIbase):
 
             self.is_open = False
 
-    def execute(self, cdb, data_out, data_in, max_sense_len=32):
+    def execute(self, cdb, data_out, data_in, max_sense_len=32, return_sense_buffer=False):
         sptd = SCSI_PASS_THROUGH_DIRECT()
-        sptd.len       = ctypes.sizeof(sptd)
+        sptd.len = ctypes.sizeof(sptd)
+
         sptd.path_id   = 0
         sptd.target_id = 1
         sptd.lun       = 0
 
-        sptd.timeout   = 1 # TODO
+        sptd.timeout = 1 # TODO ; in seconds
 
-        #---- Sense
         #sptd.sense_off = 0
         #sptd.sense_len = max_sense_len
 
-        #---- CDB
         sptd.cdb_len = len(cdb)
         for i in range(sptd.cdb_len):
             sptd.cdb[i] = cdb[i]
 
-        #---- Data
         if data_out and data_in:
-            raise NotImplemented('Bidirectional I/O is not supported.')
+            raise NotImplemented('Indirect I/O is not supported')
 
         elif data_out:
-            sptd.dir      = 0
+            sptd.dir      = SCSI_IOCTL_DATA_OUT
             sptd.data_len = len(data_out)
 
             databuff = ctypes.create_string_buffer(data_out)
             sptd.data_ptr = ctypes.cast(databuff, ctypes.POINTER(BYTE))
 
         elif data_in:
-            sptd.dir      = 1
+            sptd.dir      = SCSI_IOCTL_DATA_IN
             sptd.data_len = len(data_in)
 
             databuff = ctypes.create_string_buffer(sptd.data_len)
             sptd.data_ptr = ctypes.cast(databuff, ctypes.POINTER(BYTE))
 
-        #---- Do transfer
+        else:
+            sptd.dir      = SCSI_IOCTL_DATA_UNSPECIFIED
+
+        # after the ioctl the data_len field might change to the actual amount
+        # of data transferred, so use this for the residue...
+        datalen = sptd.data_len
+
         xlen = DWORD()
 
         sptdp = ctypes.cast(ctypes.addressof(sptd), ctypes.POINTER(BYTE))
@@ -117,13 +129,15 @@ class SCSI(SCSIbase):
                               sptdp, sptd.len, ctypes.byref(sptd), sptd.len,
                               ctypes.byref(xlen), 0)
 
-        #---- Check
         if not res:
-            raise Exception('Transfer failed... %s' % ctypes.WinError())
+            raise SCSIException('Transfer failed... %s' % ctypes.WinError())
 
-        #---- Get data
         if data_in:
             inlen = sptd.data_len
             data_in[:inlen] = bytearray(databuff.raw[:inlen])
 
-        return 0  #<-- TODO
+        # TODO, residue & sense buffer! #
+        if return_sense_buffer:
+            return datalen - sptd.data_len, b''
+        else:
+            return datalen - sptd.data_len

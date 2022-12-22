@@ -1,3 +1,7 @@
-# JL Download thing
+# JieLi UBOOT tool
 
-it is!
+very early tech development for the JieLi "UBOOT" USB download protocol.
+
+Currently there's the thing and another thing
+
+
