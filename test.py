@@ -359,15 +359,17 @@ class JL_UBOOT:
 
 class DasShell(cmd.Cmd):
     intro = \
-    """\
-        _____________
-       /___  __  ___/
-          / / / /     _______
-     __  / / / /        | |    | | |_   _   _  |_
-    / /_/ / / /____   |_| |__  |_| |_| |_| |_| |_ 
-    \____/ /______/
-
-    JieLi tech console. Type 'help' or '?' for help.
+    """
+  +--------------------------------------------------+
+  |     _____________                                |
+  |    /___  __  ___/                                |
+  |       / / / /     _______                        |
+  |  __  / / / /        | |    | | |_   _   _  |_    |
+  | / /_/ / / /____   |_| |__  |_| |_| |_| |_| |_    |
+  | \____/ /______/                                  |
+  |                                                  |
+  | JieLi tech console. Type 'help' or '?' for help. |
+  +--------------------------------------------------+
     """
     prompt = '=>JL: '
 
@@ -400,9 +402,9 @@ class DasShell(cmd.Cmd):
     def do_read(self, args):
         """Read flash to file.
         read <address> <length> <file>
-
-        <length> can be 0 to dump whole flash (size aligned to the address used)
         """
+#        <length> can be 0 to dump whole flash (size aligned to the address used)
+#        """
 
         args = args.split(maxsplit=2)
 
@@ -623,7 +625,7 @@ class DasShell(cmd.Cmd):
         """Reset chip.
         reset [<code>]
 
-        If <code> is not defined, then it will default to 1.
+        If <code> is not specified, then it will default to 1.
         """
 
         args = args.split(maxsplit=2)
@@ -667,6 +669,7 @@ while True:
         break
 
     # otherwise try to enter this mode...
+    # product.startswith(('UDISK','DEVICE'))
     else:
         try:
             dev.reset() # any command will suffice
