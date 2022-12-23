@@ -381,6 +381,9 @@ class DasShell(cmd.Cmd):
         """Get out of the shell"""
         return True
 
+    def emptyline(self):
+        pass
+
     #------#------#------#------#------#------#------#------#------#------#
 
     def do_open(self, args):
