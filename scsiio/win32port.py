@@ -88,7 +88,7 @@ class SCSIDev(SCSIDevBase):
         sptd.target_id = 1
         sptd.lun       = 0
 
-        sptd.timeout = 1 # TODO ; in seconds
+        sptd.timeout = 10 # TODO ; in seconds
 
         #sptd.sense_off = 0
         #sptd.sense_len = max_sense_len
