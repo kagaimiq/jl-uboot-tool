@@ -479,8 +479,7 @@ class DasShell(cmd.Cmd):
             print()
 
             while length > 0:
-                n = length
-                if n > maxlen: n = maxlen
+                n = min(maxlen, length)
 
                 print("\rReading %x-%x..." % (address, address + length - 1), end='', flush=True)
                 fil.write(self.dev.flash_read(address, n))
@@ -534,8 +533,7 @@ class DasShell(cmd.Cmd):
                 else:
                     block = 0x1000
 
-                n = block - (address % block)
-                if n > length: n = length
+                n = min(length, block - (address % block))
 
                 print("\rErasing %x-%x..." % (address, address + length - 1), end='', flush=True)
 
@@ -544,6 +542,8 @@ class DasShell(cmd.Cmd):
 
                 address += n
                 length -= n
+
+            print()
 
             address = xaddress
             length = xlength
@@ -607,8 +607,7 @@ class DasShell(cmd.Cmd):
             else:
                 block = 0x1000
 
-            n = block - (address % block)
-            if n > length: n = length
+            n = min(length, block - (address % block))
 
             print("\rErasing %x-%x..." % (address, address + length - 1), end='', flush=True)
 
@@ -653,8 +652,7 @@ class DasShell(cmd.Cmd):
         maxlen = self.dev.flash_max_page_size()
 
         while length > 0:
-            n = length
-            if n > maxlen: n = maxlen
+            n = min(length, maxlen)
 
             hexdump(self.dev.flash_read(address, n), address=address)
 
