@@ -416,28 +416,12 @@ class DasShell(cmd.Cmd):
         super(DasShell, self).__init__()
         self.dev = dev
 
-    def do_exit(self, args):
-        """Get out of the shell"""
-        return True
-
     def emptyline(self):
         pass
 
-    #------#------#------#------#------#------#------#------#------#------#
-
-    def do_open(self, args):
-        """Open device.
-        open <path>
-        """
-
-        print("already opened")
-
-    def do_close(self, args):
-        """Close device.
-        close
-        """
-
-        print("already closed")
+    def do_exit(self, args):
+        """Get out of the shell"""
+        return True
 
     #------#------#------#------#------#------#------#------#------#------#
 
@@ -680,7 +664,7 @@ class DasShell(cmd.Cmd):
 
         try:
             self.dev.reset(code)
-        except:
+        except SCSIException:
             print("dies...")
             return True
 
