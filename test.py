@@ -646,7 +646,7 @@ class DasShell(cmd.Cmd):
     #------#------#------#------#------#------#------#------#------#------#
 
     def do_reset(self, args):
-        """Reset chip.
+        """Reset the chip.
         reset [<code>]
 
         If <code> is not specified, then it will default to 1.
@@ -667,6 +667,158 @@ class DasShell(cmd.Cmd):
         except SCSIException:
             print("dies...")
             return True
+
+    #------#------#------#------#------#------#------#------#------#------#
+
+    def do_vmdump(self, args):
+        """Dumps the VM.
+        vmdump <address>
+
+        <address> is the address of the VM in the flash,
+            can be identified as the 4k block that's starting with
+            "55 AA AA 55", "AE A5 5A EA" or "51 5A A5 15".
+        """
+
+        """
+        v1:
+            AE A5 5A EA <= Sign         [DV12]
+            51 5A A5 15 <= Another Sign [DV16]
+
+            CcccccccLlllllllNnnnnnnn10101101
+
+            Cccccccc     = CRC16 of data (lower 8 bits)
+            Llllllll     = Data length
+            Nnnnnnnn     = ID
+
+        v2:
+            55 AA AA 55 <= Valid
+            88 44 11 22 <= Defrag started
+            AA 55 11 22 <= Defrag almost completed
+
+            CcccccccNnnnnnnnLlllllllllll1101
+
+            Cccccccc     = CRC16 of data (lower 8 bits)
+            Nnnnnnnn     = ID
+            Llllllllllll = Data length
+
+        v3:
+            55 AA AA 55 <= Valid
+            88 44 11 22 <= Defrag started
+            AA 55 11 22 <= Defrag almost completed
+
+            LlllllllllllNnnnnnnnnnnnCccccccc
+
+            Llllllllllll = Data length
+            Nnnnnnnnnnnn = ID
+            Cccccccc     = CRC16 of data (lower 8 bits)
+        """
+
+        args = args.split(maxsplit=2)
+
+        if len(args) < 1:
+            print("Not enough arguments!")
+            self.do_help('vmdump')
+            return
+
+        try:
+            address = int(args[0], 0)
+        except ValueError:
+            print("<address> [%s] is not a number!" % args[0])
+            return
+
+        #--------------------------------------------
+
+        if self.dev.flash_read(address, 4) not in (b'\x55\xaa\xaa\x55', b'\xae\xa5\x5a\xea', b'\x51\x5a\xa5\x15'):
+            print("There isn't any valid VM at %x" % address)
+            return
+
+        caddr = address + 4
+
+
+        def dec_v1(addr):
+            hdr = int.from_bytes(self.dev.flash_read(addr, 4), 'little')
+
+            if hdr == 0xffffffff:
+                return None
+
+            if (hdr & 0xff) != 0xAD:
+                return None
+
+            ecrc = (hdr >> 24) & 0xff
+            elen = (hdr >> 16) & 0xff
+            eid  = (hdr >> 8)  & 0xff
+
+            edat = self.dev.flash_read(addr + 4, elen)
+
+            if (jl_crc16(edat) & 0xff) != ecrc:
+                return None
+
+            return {'len': elen + 4, 'id': eid, 'data': edat}
+
+        def dec_v2(addr):
+            hdr = int.from_bytes(self.dev.flash_read(addr, 4), 'little')
+
+            if hdr == 0xffffffff:
+                return None
+
+            if (hdr & 0xf) != 0xD:
+                return None
+
+            ecrc = (hdr >> 24) & 0xff
+            eid  = (hdr >> 16) & 0xff
+            elen = (hdr >> 4)  & 0xfff
+
+            edat = self.dev.flash_read(addr + 4, elen)
+
+            if (jl_crc16(edat) & 0xff) != ecrc:
+                return None
+
+            return {'len': elen + 4, 'id': eid, 'data': edat}
+
+        def dec_v3(addr):
+            hdr = int.from_bytes(self.dev.flash_read(addr, 4), 'little')
+
+            if hdr == 0xffffffff:
+                return None
+
+            ecrc = (hdr >> 0)  & 0xff
+            eid  = (hdr >> 8)  & 0xfff
+            elen = (hdr >> 20) & 0xfff
+
+            edat = self.dev.flash_read(addr + 4, elen)
+
+            if (jl_crc16(edat) & 0xff) != ecrc:
+                return None
+
+            return {'len': elen + 4, 'id': eid, 'data': edat}
+
+        fmt = -1
+
+        while True:
+            if fmt < 0:
+                if dec_v1(caddr) is not None:
+                    fmt = 0
+                    continue
+
+                if dec_v2(caddr) is not None:
+                    fmt = 1
+                    continue
+
+                if dec_v3(caddr) is not None:
+                    fmt = 2
+                    continue
+
+                break
+
+            else:
+                ent = ([dec_v1, dec_v2, dec_v3][fmt])(caddr)
+                if ent is None:
+                    fmt = -1
+                    continue
+
+            print('[%4d]:' % ent['id'], ent['data'].hex(':'))
+
+            caddr += ent['len']
 
 ###### ###### ###### ###### ###### ###### ###### ###### ###### ###### ######
 
