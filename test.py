@@ -15,8 +15,8 @@ ap.add_argument('--loader',
                 metavar=('ADDR','FILE'), nargs=2)
 
 ap.add_argument('--loader-arg',
-                help="Loader's numerical argument (default=%(default)s)",
-                metavar='ARG', default='0')
+                help="Loader's numerical argument (overrides the default)",
+                metavar='ARG')
 
 ap.add_argument('--force-loader',
                 help="Explicitly run the loader, even when it's not needed",
@@ -122,7 +122,8 @@ families = {
         "loader": {
             "usb": {
                 "file": "loaderblobs/br17loader.bin",
-                "address": 0x2000
+                "address": 0x2000,
+                "argument": 0x11
             }
         }
     },
@@ -137,7 +138,8 @@ families = {
         "loader": {
             "usb": {
                 "file": "loaderblobs/br21loader.bin",
-                "address": 0x2000
+                "address": 0x2000,
+                "argument": 0x1    # 0x1 = flash, 0x7 = OTP
             }
         }
     },
@@ -747,7 +749,15 @@ with dev:
 
                 addr += len(block)
 
-        dev.mem_jump(loader['address'], int(args.loader_arg, 0))
+        if args.loader_arg is not None:
+            loader['argument'] = int(args.loader_arg, 0)
+
+        if 'argument' not in loader:
+            loader['argument'] = 0
+
+        print("Running loader at %(address)08x, with argument %(argument)04x..." % loader)
+
+        dev.mem_jump(loader['address'], loader['argument'])
 
         print("Loader uploaded successfully")
 
