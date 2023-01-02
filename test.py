@@ -259,7 +259,44 @@ class JL_UBOOT:
     #-------------------------------------------#
 
     def open(self):
-        self.dev = SCSIDev(self.path)
+        print("Waiting for [%s]" % self.path, end='', flush=True)
+
+        while True:
+            # try to open the device *right now*, if we fail for whatever reason,
+            # we try again (should probably only ignore the 'file not found' and 'permission denied' stuff)
+            try:
+                self.dev = SCSIDev(self.path)
+            except:
+                print('.', end='', flush=True)
+                time.sleep(.5)
+                continue
+
+            print(" try!", end='', flush=True)
+
+            # try to get inquiry data
+            try:
+                vendor, product, prodrev = self.inquiry()
+            except SCSIException:
+                print(" fail!", end='', flush=True)
+                self.dev.close()
+                time.sleep(.5)
+                continue
+
+            # if it's an UBOOT device then we'll proceed
+            if product.startswith('UBOOT'):
+                print(" ok (%s %s %s)" % (vendor, product, prodrev))
+                break
+
+            # otherwise try to enter this mode...
+            # product.startswith(('UDISK','DEVICE'))
+            else:
+                try:
+                    self.reset() # any command will suffice
+                except SCSIException:
+                    pass
+
+            self.dev.close()
+            time.sleep(.5)
 
     def close(self):
         self.dev.close()
@@ -651,40 +688,7 @@ class DasShell(cmd.Cmd):
 
 ###### ###### ###### ###### ###### ###### ###### ###### ###### ###### ######
 
-print("Waiting for [%s]!" % args.device, end='', flush=True)
-
-while True:
-    # wait for the device to appear
-    if not os.path.exists(args.device):
-        print('.', end='', flush=True)
-        time.sleep(.5)
-        continue
-
-    # open the device
-    dev = JL_UBOOT(args.device)
-
-    print("try!", end='', flush=True)
-
-    # get inquiry data
-    vendor, product, prodrev = dev.inquiry()
-
-    # if it's an UBOOT device then we'll proceed
-    if product.startswith('UBOOT'):
-        print("ok")
-        break
-
-    # otherwise try to enter this mode...
-    # product.startswith(('UDISK','DEVICE'))
-    else:
-        try:
-            dev.reset() # any command will suffice
-        except SCSIException:
-            pass
-
-    dev.close()
-    time.sleep(.5)
-
-with dev:
+with JL_UBOOT(args.device) as dev:
     vendor, product, prodrev = dev.inquiry()
 
     chipname = vendor
