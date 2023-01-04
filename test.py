@@ -1,6 +1,6 @@
 from scsiio import SCSIDev
 from scsiio.common import SCSIException
-from jlstuff import *
+from jl_stuff import *
 import argparse, os, time, cmd
 
 ap = argparse.ArgumentParser(description='JieLi tech test X999999',
