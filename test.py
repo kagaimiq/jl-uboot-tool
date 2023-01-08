@@ -70,7 +70,7 @@ families = {
     },
 
     "DV16": {
-        "name": ["AC54xx", "AC56xx"],
+        "name": ["AC540N", "AC560N"],
 
         "loader": {
             "usb": {
