@@ -66,7 +66,7 @@ families = {
     },
 
     "DV15": {
-        "name": ["AC5?1N"],
+        "name": ["AC521N"],
     },
 
     "DV16": {
