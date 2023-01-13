@@ -67,6 +67,13 @@ families = {
 
     "DV15": {
         "name": ["AC521N"],
+
+        "loader": {
+            "usb": {
+                "file": "loaderblobs/dv15loader.bin",
+                "address": 0xf02000
+            }
+        }
     },
 
     "DV16": {
