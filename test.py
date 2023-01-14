@@ -1,5 +1,5 @@
 from jl_stuff import *
-from jl_uboot import JL_UBOOT
+from jl_uboot import JL_UBOOT, SCSIException
 import argparse, cmd
 
 ap = argparse.ArgumentParser(description='JieLi tech test X999999',
