@@ -6,8 +6,8 @@ ap = argparse.ArgumentParser(description='JieLi tech test X999999',
                              epilog='Taiyoukouhatsudensystem ver1.25 by tsutsumin!')
 
 ap.add_argument('--device',
-                help='Path to the JieLi disk (e.g. /dev/sg2 or \\\\.\\E:)',
-                required=True)
+                help='Specify a path to the JieLi disk (e.g. /dev/sg2 or \\\\.\\E:), ' +
+                     'if not specified, then it tries to search for devices.')
 
 ap.add_argument('--loader',
                 help='Custom loader binary load address and file',
@@ -677,7 +677,51 @@ class DasShell(cmd.Cmd):
 
 ###### ###### ###### ###### ###### ###### ###### ###### ###### ###### ######
 
-with JL_UBOOT(args.device) as dev:
+if args.device is not None:
+    device = args.device
+
+else:
+    from jldevfind import FindJLDevs
+
+    devs = FindJLDevs()
+
+    if len(devs) == 0:
+        print('No devices found')
+        exit(1)
+
+    elif len(devs) == 1:
+        print('Found some device: %s' % devs[0]['name'])
+        device = devs[0]['path']
+
+    else:
+        print('Found %d devices, please select the correct one' % len(devs))
+
+        for i, dev in enumerate(devs):
+            print('%3d: %s' % (i, dev['name']))
+
+        print()
+
+        while True:
+            inp = input('[0..%d|q]: ' % (len(devs) - 1)).strip()
+
+            if inp == '': continue
+
+            if inp.lower().startswith('q'):
+                exit()
+
+            try:
+                num = int(inp)
+            except ValueError:
+                print('Please enter a number!')
+                continue
+
+            try:
+                device = devs[num]['path']
+                break
+            except IndexError:
+                print('Please enter a number in range 0..%d!' % (len(devs) - 1))
+
+with JL_UBOOT(device) as dev:
     vendor, product, prodrev = dev.inquiry()
 
     chipname = vendor
