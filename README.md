@@ -36,8 +36,28 @@ Thus, the D- is the data line an D+ is the clock line. Clock frequency used by t
 You send this sequence repeatedly until the D- and D+ lines gets pulled down by the chip as an acknowledge.
 
 A thing that's worth noting is that the chips like BR17 or BR21 doesn't care what bit it has received first, it will evenually synchronize and finally enter the UBOOT mode, which will **time out** in ~4 seconds, so you need to connect USB really quick until this will eventially time out.
+```
+5v | ______________ ... ________----------------------------------------------------------------
+D- | ______--__---- ... __----__---- ... ______--__----__------__--------______--____________---
+D+ | _-_-_-_-_-_-_- ... _-_-_-_-_-_- ... _-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-__________-_-
+     |                          |        \............................../          \......../
+  starting to send    the power is       valid sequence                         chip acknowlegdes
+  out signals         applied to the     starts there                           this
+                      chip
+```
 
-But with e.g. BR25 or BR28 chips, you have to send out the bits correctly *first*, and so you need to control the chip's power to then delay a bit (like 20ms or so), and *only* then send out the signal. The chip will then enter the UBOOT mode, which seem to not have any timeouts.
+But with e.g. BR25 or BR28 chips, you *have* to send out the bits correctly.
+So you need to turn on power to the chip, delay a bit (like 20ms or so), and *only* then send out the signal. The chip will then enter the UBOOT mode, which seem to not have any timeouts.
+```
+5v | ___________--------------------------------------------------------------------
+D- | __________________________________--__----__------__--------________________---
+D+ | _____________________________-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-__________-_-
+     |          | \............./\............................../      \......../
+   don't      apply    wait for          start to send out           chip acknowledges
+   send     power to   a little bit        the sequence              this
+ anything   the chip   for chip to
+    yet                be ready
+```
 
 Also worth noting that chips like BR23 seem to have issues with this method and so it uses a completely different sequence to enter into this mode, which seems to use some hardware protocols like ISD (in system debug?)
 
