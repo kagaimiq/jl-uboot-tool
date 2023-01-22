@@ -14,7 +14,7 @@ There are two 'versions' (or 'variants') of the UBOOT mode: "UBOOT1.00" and "UBO
 
 The "UBOOT1.00" is provided by the BootROM which boots up the chip, and so, as it always happens, it have really bare bones functionality - you can only read memory, write memory and jump to it.
 
-So to do anything else you need to use a "loader" binary (e.g. "br17loader.bin" "br21loader.bin", etc), just like you are doing with Allwinner, Rockchip, Mediatek, Spreadtrum or pretty much anything else.
+So to do anything else you need to use a "loader" binary (e.g. "br17loader.bin" "br21loader.bin", etc), just like you are doing with Allwinner (FES), Rockchip (rk30usbplug), Mediatek (download agent), Spreadtrum (FDL1+FDL2) or pretty much anything else.
 
 The "UBOOT2.00" on other hand is provided some "uboot.boot" second stage bootloaders (e.g. in BR17 or BR21 SDK), which allows to do flashing without any loader binaries, as the uboot.boot by itself can flash the updates from the BFU files. And seems like it can also recrypt a firmware encrypted with the 0xffff key to the one that's burned into chip's efuses (the chip key)
 
