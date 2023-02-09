@@ -15,6 +15,13 @@ the help entries of the commands should be obvious to understand.
 
 A simple script that loads a code binary into RAM and executes it with optionally given argument.
 
+### jldevfind.py
+
+A script that prints out all possibly-JieLi-related devices it found.
+i.e. the ones that start with "UBOOT", "UDISK" or "DEVICE"
+
+It is also used in test.py to find the devices when no '--device' argument was given.
+
 ## What is "UBOOT"
 
 "UBOOT" (not to be confused with "Das U-Boot"), Upgrade or Download mode is the mode which is used to download firmware into a builtin flash of the device (either one built into the chip itself or as a separate discrete component), 
