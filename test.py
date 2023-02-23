@@ -31,8 +31,8 @@ families = {
 
         "loader": {
             "usb": {
-                "file": "loaderblobs/ac4100loader.bin",
-                "address": 0x9000
+                "file": "loaderblobs/usb/ac4100loader.bin",
+                "address": 0x0009000
             }
         }
     },
@@ -42,8 +42,8 @@ families = {
 
         "loader": {
             "usb": {
-                "file": "loaderblobs/bt15loader.bin",
-                "address": 0x2000 # ?? maybe?
+                "file": "loaderblobs/usb/bt15loader.bin",
+                "address": 0x0002000 # ?? maybe?
             }
         }
     },
@@ -53,8 +53,8 @@ families = {
 
         "loader": {
             "usb": {
-                "file": "loaderblobs/bc51loader.bin",
-                "address": 0x2000 # ?? maybe?
+                "file": "loaderblobs/usb/bc51loader.bin",
+                "address": 0x0002000 # ?? maybe?
             }
         }
     },
@@ -70,8 +70,9 @@ families = {
 
         "loader": {
             "usb": {
-                "file": "loaderblobs/dv15loader.bin",
-                "address": 0xf02000
+                "file": "loaderblobs/usb/dv15loader.enc",
+                "address": 0x0f02000,
+                "encrypted": True
             }
         }
     },
@@ -81,8 +82,59 @@ families = {
 
         "loader": {
             "usb": {
-                "file": "loaderblobs/dv16loader.bin",
+                "file": "loaderblobs/usb/dv16loader.bin",
                 "address": 0x3f02000
+            }
+        }
+    },
+
+    # -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- #
+
+    "SH54": {
+        "name": ["AD14N", "AD104N"],
+        "cryptoweirdo": True,
+
+        "loader": {
+            "usb": {
+                "file": "loaderblobs/usb/sh54loader.bin",
+                "address": 0x0000b00,
+                "encrypted": True
+            },
+            "uart": {
+                "file": "loaderblobs/uart/sh54loader.uart",
+                "address": 0x0000b00,
+                "encrypted": True
+            }
+        }
+    },
+
+    "SH55": {
+        "name": ["AD15N", "AD105N"],
+        "cryptoweirdo": True,
+
+        "loader": {
+            "uart": {
+                "file": "loaderblobs/uart/sh55loader.uart",
+                "address": 0x0000000,
+                "encrypted": True
+            }
+        }
+    },
+
+    "UC03": {
+        "name": ["AD16N"],
+        "cryptoweirdo": True,
+
+        "loader": {
+            #"usb": { # ... in some special format
+            #    "file": "loaderblobs/usb/uc03loader.bin",
+            #    "address": 0x0101600,
+            #    "encrypted": True
+            #},
+            "uart": {
+                "file": "loaderblobs/uart/uc03loader.uart",
+                "address": 0x0101600,
+                "encrypted": True
             }
         }
     },
@@ -95,13 +147,13 @@ families = {
 
         "loader": {
             "usb": {
-                "file": "loaderblobs/bd19loader.bin",
-                "address": 0x2000,
+                "file": "loaderblobs/usb/bd19loader.bin",
+                "address": 0x0002000,
                 "encrypted": True
             },
             "uart": {
-                "file": "loaderblobs/bd19loader.uart",
-                "address": 0x2000,
+                "file": "loaderblobs/uart/bd19loader.uart",
+                "address": 0x0002000,
                 "encrypted": True
             }
         }
@@ -113,8 +165,8 @@ families = {
 
         "loader": {
             "usb": {
-                "file": "loaderblobs/bd29loader.bin",
-                "address": 0x2000,
+                "file": "loaderblobs/usb/bd29loader.bin",
+                "address": 0x0002000,
                 "encrypted": True
             }
         }
@@ -127,8 +179,8 @@ families = {
 
         "loader": {
             "usb": {
-                "file": "loaderblobs/br17loader.bin",
-                "address": 0x2000,
+                "file": "loaderblobs/usb/br17loader.bin",
+                "address": 0x0002000,
                 "argument": 0x11
             }
         }
@@ -143,8 +195,8 @@ families = {
 
         "loader": {
             "usb": {
-                "file": "loaderblobs/br21loader.bin",
-                "address": 0x2000,
+                "file": "loaderblobs/usb/br21loader.bin",
+                "address": 0x0002000,
                 "argument": 0x1    # 0x1 = flash, 0x7 = OTP
             }
         }
@@ -160,13 +212,13 @@ families = {
 
         "loader": {
             "usb": {
-                "file": "loaderblobs/br23loader.bin",
-                "address": 0x12000,
+                "file": "loaderblobs/usb/br23loader.bin",
+                "address": 0x0012000,
                 "encrypted": True
             },
             "uart": {
-                "file": "loaderblobs/br23loader.uart",
-                "address": 0x12000,
+                "file": "loaderblobs/uart/br23loader.uart",
+                "address": 0x0012000,
                 "encrypted": True
             }
         }
@@ -178,13 +230,13 @@ families = {
 
         "loader": {
             "usb": {
-                "file": "loaderblobs/br25loader.bin",
-                "address": 0x12000,
+                "file": "loaderblobs/usb/br25loader.bin",
+                "address": 0x0012000,
                 "encrypted": True
             },
             "uart": {
-                "file": "loaderblobs/br25loader.uart",
-                "address": 0x12000,
+                "file": "loaderblobs/uart/br25loader.uart",
+                "address": 0x0012000,
                 "encrypted": True
             }
         }
@@ -193,6 +245,14 @@ families = {
     "BR28": {
         "name": ["AC701N"],
         "cryptoweirdo": True,
+
+        "loader": {
+            "usb": {
+                "file": "loaderblobs/usb/br28loader.bin",
+                "address": 0x0120000,
+                "encrypted": True
+            }
+        }
     },
 
     "BR30": {
@@ -201,13 +261,13 @@ families = {
 
         "loader": {
             "usb": {
-                "file": "loaderblobs/br30loader.bin",
-                "address": 0x2000,
+                "file": "loaderblobs/usb/br30loader.bin",
+                "address": 0x0002000,
                 "encrypted": True
             },
             "uart": {
-                "file": "loaderblobs/br30loader.uart",
-                "address": 0x2000,
+                "file": "loaderblobs/uart/br30loader.uart",
+                "address": 0x0002000,
                 "encrypted": True
             }
         }
@@ -219,13 +279,13 @@ families = {
 
         "loader": {
             "usb": {
-                "file": "loaderblobs/br34loader.bin",
-                "address": 0x20000,
+                "file": "loaderblobs/usb/br34loader.bin",
+                "address": 0x0020000,
                 "encrypted": True
             },
             "uart": {
-                "file": "loaderblobs/br34loader.uart",
-                "address": 0x20000,
+                "file": "loaderblobs/uart/br34loader.uart",
+                "address": 0x0020000,
                 "encrypted": True
             }
         }
@@ -240,12 +300,26 @@ families = {
 
     "WL80": {
         "name": ["AC790N"],
-        "cryptoweirdo": True,
+
+        "loader": {
+            "usb": {
+                "file": "loaderblobs/usb/wl80loader.bin",
+                "address": 0x1C02000 # ?? ... somewhere in 0x1C0XXXX
+            }
+        }
     },
 
     "WL82": {
         "name": ["AC791N"],
         "cryptoweirdo": True,
+
+        "loader": {
+            "usb": {
+                "file": "loaderblobs/usb/wl82loader.bin",
+                "address": 0x1C02000, # ?? ... somewhere in 0x1C0XXXX
+                "encrypted": True
+            }
+        }
     },
 }
 
