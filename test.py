@@ -188,6 +188,14 @@ families = {
 
     "BR20": {
         "name": ["AC691N"],
+
+        "loader": {
+            "usb": {
+                "file": "loaderblobs/usb/br20loader.bin",
+                "address": 0x0002000,
+                "argument": 0x0
+            }
+        }
     },
 
     "BR21": {
