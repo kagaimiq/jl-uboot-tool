@@ -120,6 +120,7 @@ Commands that supplement the MaskROM command set; available from the Loader or t
     * 2 - SD card
     * 3 - SPI0 NOR flash
     * 4 - SPI0 NAND flash
+    * 5 - OTP (id reports as 0x4f545010 "OTP\x10", at least on BR20)
     * 16 = SD card
     * 17 = SD card
     * 18 = SD card
