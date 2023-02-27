@@ -51,6 +51,21 @@ If the hook returns zero then the command will be handled by the MaskROM/etc.
 
 The hook gets reset when this command is executed.
 
+### Write memory (encrypted)
+
+**Note: DV15-specific**
+
+- Command: `FB 31 AA:aa:aa:aa SS:ss -- cc:CC`
+  * AA:aa:aa:aa = Memory address
+  * SS:ss = Size of data
+  * cc:CC = CRC16 of data
+- Data in: data to be written
+
+This command is similar to the regular write memory command (FB 06),
+however it takes data encrypted with something different than what the regular write command takes in some chips.
+
+Look at the *dv15loader.bin* for an example of data transferred via this command (data is transmitted in 512 byte blocks)
+
 ## Loader commands (BR17/BR21/etc)
 
 Commands that supplement the MaskROM command set; available from the Loader or the UBOOT2.00 variant.
