@@ -15,7 +15,8 @@ Commands that are available in the MaskROM stage, i.e. in the UBOOT1.00 variant.
   * cc:CC = CRC16 of data
 - Data in: data to be written
 
-**Note:** Some chips accept the data encrypted!
+**Note:** Some chips accept the data encrypted with the "CRC" encryption!
+They do it via writing the raw data into the target memory address, and then decrypting it.
 
 ### Read memory
 
@@ -24,7 +25,10 @@ Commands that are available in the MaskROM stage, i.e. in the UBOOT1.00 variant.
   * SS:ss = Size of data
 - Data out: data that was read
 
-**Note:** Some chips return the data encrypted!
+**Note:** Some chips return the data encrypted with the "CRC" encryption!
+They do it via encrypting the *target* address *first*, then sending the block and decrypting it back.
+This means that SRAM will be read out encrypted (but be careful, you might break the ROM runtime with this!),
+but MaskROM won't, as well as the peripheral registers (it will mess up these!)
 
 ### Jump to memory
 
@@ -33,7 +37,7 @@ Commands that are available in the MaskROM stage, i.e. in the UBOOT1.00 variant.
   * BB:bb = Argument
 
 The code is called with a pointer to the "arglist" stored in register R0,
-whose structure is that:
+which has the following structure:
 ```c
 struct JieLi_LoaderArgs {
 	void (*msd_send)(void *ptr, int len);		// send data
@@ -50,6 +54,21 @@ then it will be called on *all* SCSI commands received.
 If the hook returns zero then the command will be handled by the MaskROM/etc.
 
 The hook gets reset when this command is executed.
+
+### Write memory (encrypted)
+
+**Note: DV15-specific**
+
+- Command: `FB 31 AA:aa:aa:aa SS:ss -- cc:CC`
+  * AA:aa:aa:aa = Memory address
+  * SS:ss = Size of data
+  * cc:CC = CRC16 of data
+- Data in: data to be written
+
+This command is similar to the regular write memory command (FB 06),
+however it takes data encrypted with something different than what the regular write command takes in some chips.
+
+Look at the *dv15loader.bin* for an example of data transferred via this command (data is transmitted in 512 byte blocks)
 
 ## Loader commands (BR17/BR21/etc)
 
@@ -105,6 +124,7 @@ Commands that supplement the MaskROM command set; available from the Loader or t
     * 2 - SD card
     * 3 - SPI0 NOR flash
     * 4 - SPI0 NAND flash
+    * 5 - OTP (id reports as 0x4f545010 "OTP\x10", at least on BR20)
     * 16 = SD card
     * 17 = SD card
     * 18 = SD card
