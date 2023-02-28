@@ -4,7 +4,7 @@ very early tech development for the JieLi "UBOOT" USB download protocol.
 
 ## Tools
 
-### test.py
+### jltest.py
 
 A very unstable thing out there. This is where all stuff gets tested on, and so it is subject to heavy changes.
 
