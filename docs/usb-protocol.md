@@ -1,4 +1,4 @@
-# UBOOT's USB protocol
+# USB protocol
 
 The chip under the UBOOT mode is visible on the USB bus as an ordinary mass storage device,
 and so it uses custom SCSI commands to do the stuff.

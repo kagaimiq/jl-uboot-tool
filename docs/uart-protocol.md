@@ -1,4 +1,4 @@
-# UBOOT's UART protocol
+# UART protocol
 
 The UART is initialized to 9600 baud, typically on the PB5 port which is shared with the LDO_IN line,
 which seeminly allows to e.g. flash the earbuds from the charging case or something like that..
