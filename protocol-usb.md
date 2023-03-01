@@ -3,9 +3,11 @@
 The chip under the UBOOT mode is visible on the USB bus as an ordinary mass storage device,
 and so it uses custom SCSI commands to do stuff.
 
-## MaskROM commands
+## UBOOT1.00 commands
 
-Commands that are available in the MaskROM stage, i.e. in the UBOOT1.00 variant.
+The base command set that is provided by the UBOOT1.00 variant that lives in the MaskROM.
+Basically the only thing it can do is access the memory and enter the code,
+and so to do more things you need to run a loader binary first.
 
 ### Write memory
 
@@ -26,9 +28,10 @@ They do it via writing the raw data into the target memory address, and then dec
 - Data out: data that was read
 
 **Note:** Some chips return the data encrypted with the "CRC" encryption!
-They do it via encrypting the *target* address *first*, then sending the block and decrypting it back.
+They do it via encrypting the *target* address *first*, then sending the block and finally decrypting it back.
 This means that SRAM will be read out encrypted (but be careful, you might break the ROM runtime with this!),
-but MaskROM won't, as well as the peripheral registers (it will mess up these!)
+however MaskROM (and other read-only areas such as the SFC map or reserved areas) won't,
+as well as the peripheral registers (it absolutely will mess up these!)
 
 ### Jump to memory
 
@@ -68,11 +71,12 @@ The hook gets reset when this command is executed.
 This command is similar to the regular write memory command (FB 06),
 however it takes data encrypted with something different than what the regular write command takes in some chips.
 
-Look at the *dv15loader.bin* for an example of data transferred via this command (data is transmitted in 512 byte blocks)
+Look at the *dv15loader.enc* for an example of data transferred via this command (data is transmitted in 512 byte blocks)
 
-## Loader commands (BR17/BR21/etc)
+## Loader/UBOOT2.00 commands (BR17/BR21/etc)
 
-Commands that supplement the MaskROM command set; available from the Loader or the UBOOT2.00 variant.
+Additional command set provided by the loader binary or an UBOOT2.00 variant (e.g. from uboot.boot)
+being valid for the BR17/BR21/etc families
 
 ### Erase flash block (64k)
 
