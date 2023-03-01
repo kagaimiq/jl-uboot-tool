@@ -25,6 +25,7 @@ and so it uses custom SCSI commands to do the stuff.
 - 0x09 = [Get chipkey](#get-chipkey)
 - 0x0A = [Get online device](#get-online-device)
 - 0x0C = [Reset](#reset)
+- 0x0E = Seemingly "Get flash CRC16" of the DV15/etc loader
 - 0x13 = [Get flash CRC16](#get-flash-crc16)
 - 0x14 = [Get flash max page size](#get-flash-max-page-size)
 
@@ -103,27 +104,29 @@ however it takes data encrypted with something different than what the regular w
 
 Look at the *dv15loader.enc* for an example of data transferred via this command (data is transmitted in 512 byte blocks)
 
-## Loader/UBOOT2.00 commands (BR17/BR21/etc)
+## Loader/UBOOT2.00 commands
 
 Additional command set provided by the loader binary or an UBOOT2.00 variant (e.g. from uboot.boot)
-being valid for the BR17/BR21/etc families
 
 ### Erase flash block (64k)
 
 - Command: `FB 00 AA:aa:aa:aa`
   * AA:aa:aa:aa = Address of the block
-- Data out: `FB 00 -- -- -- -- -- -- -- -- -- -- -- -- -- --`
+- Data out: `FB 00 SS -- -- -- -- -- -- -- -- -- -- -- -- --`
+  * SS = Erase status (0 = succeed, else = failed)
 
 ### Erase flash sector (4k)
 
 - Command: `FB 01 AA:aa:aa:aa`
   * AA:aa:aa:aa = Address of the sector
-- Data out: `FB 01 -- -- -- -- -- -- -- -- -- -- -- -- -- --`
+- Data out: `FB 01 SS -- -- -- -- -- -- -- -- -- -- -- -- --`
+  * SS = Erase status (0 = succeed, else = failed)
 
 ### Erase flash chip
 
 - Command: `FB 02 -- -- -- --`
-- Data out: `FB 02 -- -- -- -- -- -- -- -- -- -- -- -- -- --`
+- Data out: `FB 02 SS -- -- -- -- -- -- -- -- -- -- -- -- --`
+  * SS = Erase status (0 = succeed, else = failed)
 
 *Note:* seems to be not always present..
 
@@ -180,7 +183,7 @@ being valid for the BR17/BR21/etc families
 
 ### Burn chipkey
 
-**WARNING:** BE CAREFUL, THIS OPERATION IS NON-REVERSIBLE!
+**WARNING:** BE CAREFUL, THIS OPERATION IS IRREVERSIBLE!
 
 Don't know yet..
 
