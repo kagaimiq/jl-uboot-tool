@@ -130,7 +130,7 @@ class JL_UBOOT:
     # FC-09 : Get chip key
     def chip_key(self, arg=0xac6900):
         resp = self.exec_cmd(b'\xfc\x09' + arg.to_bytes(4, 'big'))
-        return int.from_bytes(jl_cryptcrc(resp[4:6][::-1]), 'little')
+        return int.from_bytes(jl_crypt_mengli(resp[4:6][::-1]), 'little')
 
     # FC-0A : Get online device
     def online_device(self):

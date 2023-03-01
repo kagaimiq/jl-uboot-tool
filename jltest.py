@@ -862,7 +862,7 @@ with JL_UBOOT(device) as dev:
                 if block == b'': break
 
                 if (not encrypted and weirdo) or (encrypted and not weirdo):
-                    block = jl_cryptcrc(block)
+                    block = jl_crypt_mengli(block)
 
                 dev.mem_write(addr, block)
 

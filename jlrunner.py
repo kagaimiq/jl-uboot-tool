@@ -37,7 +37,7 @@ with JL_UBOOT(args.device) as dev:
             if block == b'': break
 
             if args.encrypt:
-                block = jl_cryptcrc(block)
+                block = jl_crypt_mengli(block)
 
             dev.mem_write(addr, block)
             addr += len(block)
