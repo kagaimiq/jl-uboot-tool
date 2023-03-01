@@ -1,7 +1,7 @@
 # UBOOT's USB protocol
 
-A chip under UBOOT mode, is visible on USB as an ordinary mass storage device,
-and so it uses custom SCSI commands to do various stuff.
+The chip under the UBOOT mode is visible on the USB bus as an ordinary mass storage device,
+and so it uses custom SCSI commands to do stuff.
 
 ## MaskROM commands
 
