@@ -48,7 +48,7 @@ and so to do more things you need to load a "loader" binary first.
   * cc:CC = CRC16 of data
 - Data in: data to be written
 
-**Note:** Some chips accept the data encrypted with the "CRC" encryption!
+**Note:** Some chips accept the data encrypted with the "MengLi" encryption!
 They do it via writing the raw data into the target memory address, and then decrypting it.
 
 ### Read memory
@@ -58,7 +58,7 @@ They do it via writing the raw data into the target memory address, and then dec
   * SS:ss = Size of data
 - Data out: data that was read
 
-**Note:** Some chips return the data encrypted with the "CRC" encryption!
+**Note:** Some chips return the data encrypted with the "MengLi" encryption!
 They do it via encrypting the *target* address *first*, then sending the block and finally decrypting it back.
 This means that SRAM will be read out encrypted (but be careful, you might break the ROM runtime with this!),
 however MaskROM (and other read-only areas such as the SFC map or reserved areas) won't,
@@ -149,7 +149,10 @@ Additional command set provided by the loader binary or an UBOOT2.00 variant (e.
 - Command: `FC 09 AA:aa:aa:aa`
   * AA:aa:aa:aa = magic value, for AC69xx it's 0xAC6900
 - Data out: `FC 09 -- -- -- -- KK:kk -- -- -- -- -- -- -- --`
-  * KK:kk = Chipkey (little-endian value gets encrypted then put there in big-endian...)
+  * KK:kk = Chipkey
+
+The chipkey is returned encrypted with the "MengLi" encryption,
+the little-endian value gets encrypted then put there in big-endian.
 
 ### Get online device
 
