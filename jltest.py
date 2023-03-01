@@ -776,7 +776,7 @@ else:
         device = devs[0]['path']
 
     else:
-        print('Found %d devices, please select the correct one' % len(devs))
+        print('Found %d devices, please choose the one you want to use right now, or quit (q)' % len(devs))
 
         for i, dev in enumerate(devs):
             print('%3d: %s' % (i, dev['name']))
