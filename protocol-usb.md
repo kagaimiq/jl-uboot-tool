@@ -1,13 +1,43 @@
 # UBOOT's USB protocol
 
 The chip under the UBOOT mode is visible on the USB bus as an ordinary mass storage device,
-and so it uses custom SCSI commands to do stuff.
+and so it uses custom SCSI commands to do the stuff.
+
+## Opcodes
+
+- 0xF5 = ??
+- 0xFB = "Write flash"
+- 0xFC = "Other"
+- 0xFD = "Read flash"
+
+### 0xFB sub-opcodes
+
+- 0x00 = [Erase flash block (64k)](#erase-flash-block-64k)
+- 0x01 = [Erase flash sector (4k)](#erase-flash-sector-4k)
+- 0x02 = [Erase flash chip](#erase-flash-chip)
+- 0x04 = [Write flash](#write-flash)
+- 0x06 = [Write memory](#write-memory)
+- 0x08 = [Jump to memory](#jump-to-memory)
+- 0x31 = [Write memory (encrypted)](#write-memory-encrypted)
+
+### 0xFC sub-opcodes
+
+- 0x09 = [Get chipkey](#get-chipkey)
+- 0x0A = [Get online device](#get-online-device)
+- 0x0C = [Reset](#reset)
+- 0x13 = [Get flash CRC16](#get-flash-crc16)
+- 0x14 = [Get flash max page size](#get-flash-max-page-size)
+
+### 0xFD sub-opcodes
+
+- 0x05 = [Read flash](#read-flash)
+- 0x07 = [Read memory](#read-memory)
 
 ## UBOOT1.00 commands
 
 The base command set that is provided by the UBOOT1.00 variant that lives in the MaskROM.
-Basically the only thing it can do is access the memory and enter the code,
-and so to do more things you need to run a loader binary first.
+Basically the only thing it can do is access the memory and run the code,
+and so to do more things you need to load a "loader" binary first.
 
 ### Write memory
 
@@ -39,8 +69,7 @@ as well as the peripheral registers (it absolutely will mess up these!)
   * AA:aa:aa:aa = Memory address
   * BB:bb = Argument
 
-The code is called with a pointer to the "arglist" stored in register R0,
-which has the following structure:
+In most chips, the loader is called with the register r0 holding a pointer to the "arglist", which has the following structure:
 ```c
 struct JieLi_LoaderArgs {
 	void (*msd_send)(void *ptr, int len);		// send data
@@ -51,16 +80,17 @@ struct JieLi_LoaderArgs {
 };
 ```
 
-The response to this command is sent after the code returns, and if the SCSI command hook was set,
-then it will be called on *all* SCSI commands received.
+In AC4100, however, the arguments are different: r3 passes the msd_send function, r4 passes the msd_recv function and r5 passes the msd_hook.
 
-If the hook returns zero then the command will be handled by the MaskROM/etc.
+The response to this command is returned after the code returns, and if the SCSI hook was set, then it will handle *all* requests *first*.
+If the hook returns zero, then this command will be handled by the "host".
+Otherwise it will be assumed that this command was handled by the hook.
 
-The hook gets reset when this command is executed.
+The hook gets reset when this command is executed, before calling the code.
 
 ### Write memory (encrypted)
 
-**Note: DV15-specific**
+**Note: (at least) DV15-specific**
 
 - Command: `FB 31 AA:aa:aa:aa SS:ss -- cc:CC`
   * AA:aa:aa:aa = Memory address
@@ -69,7 +99,7 @@ The hook gets reset when this command is executed.
 - Data in: data to be written
 
 This command is similar to the regular write memory command (FB 06),
-however it takes data encrypted with something different than what the regular write command takes in some chips.
+however it takes data encrypted with something different than what the regular write command may take on some chips.
 
 Look at the *dv15loader.enc* for an example of data transferred via this command (data is transmitted in 512 byte blocks)
 
@@ -123,21 +153,24 @@ being valid for the BR17/BR21/etc families
 - Command: `FC 0A -- -- -- --`
 - Data out: `FC 0A AA -- bb:bb:bb:BB -- -- -- -- -- -- -- --`
   * AA = Device type:
-    * 0 - no device
-    * 1 - SDRAM
-    * 2 - SD card
-    * 3 - SPI0 NOR flash
-    * 4 - SPI0 NAND flash
-    * 5 - OTP (id reports as 0x4f545010 "OTP\x10", at least on BR20)
-    * 16 = SD card
-    * 17 = SD card
-    * 18 = SD card
-    * 19 = ?
-    * 20 = ?
-    * 21 = ?
-    * 22 = SPI1 NOR flash
-    * 23 = SPI1 NAND flash
-  * bb:bb:bb:BB = Device ID (for SPI flash it's the JEDEC ID returned with command 0x9F)
+    * 0x00 - no device
+    * 0x01 - SDRAM
+    * 0x02 - SD card
+    * 0x03 - SPI NOR flash (on SPI0)
+    * 0x04 - SPI NAND flash (on SPI0)
+    * 0x05 - OTP
+    * 0x10 = SD card
+    * 0x11 = SD card
+    * 0x12 = SD card
+    * 0x13 = ?
+    * 0x14 = ?
+    * 0x15 = ?
+    * 0x16 = SPI NOR flash (on SPI1)
+    * 0x17 = SPI NAND flash (on SPI1)
+  * bb:bb:bb:BB = Device ID
+    * for SPI (NOR) flash it's the JEDEC ID returned by the 0x9F command
+    * for OTP, it is 0x4f545010 "OTP\x10"
+    * for SD card, it is 0x73647466 "sdtf" (maybe)
 
 ### Reset
 
@@ -147,7 +180,9 @@ being valid for the BR17/BR21/etc families
 
 ### Burn chipkey
 
-- Command: .....
+**WARNING:** BE CAREFUL, THIS OPERATION IS NON-REVERSIBLE!
+
+Don't know yet..
 
 ### Get flash CRC16
 
@@ -157,7 +192,7 @@ being valid for the BR17/BR21/etc families
 - Data out: `FC 13 CC:cc -- -- -- -- -- -- -- -- -- -- -- --`
   * CC:cc = Calculated CRC16
 
-### Get max flash page size
+### Get flash max page size
 
 - Command: `FC 14 -- -- -- --`
 - Data out: `FC 14 SS:ss:ss:ss -- -- -- -- -- -- -- -- -- --`
