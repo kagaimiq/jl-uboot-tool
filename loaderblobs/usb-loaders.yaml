@@ -1,0 +1,126 @@
+# USB loaders definition
+
+ac4100:
+    file: loaderblobs/usb/ac4100loader.bin
+    address: 0x9000
+
+bt15:
+    file: loaderblobs/usb/bt15loader.bin
+    address: 0x2000 # maybe
+
+bc51:
+    file: loaderblobs/usb/bc51loader.bin
+    address: 0x2000 # maybe
+
+# -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- #
+
+# this seems not to work
+#dv15:
+#    file: loaderblobs/usb/dv15loader.bin
+#    address: 0xf02000
+
+dv15:
+    file: loaderblobs/usb/dv15loader.enc
+    address: 0xf02000
+    encryption: RxGp
+    block-size: 512
+
+dv16:
+    file: loaderblobs/usb/dv16loader.bin
+    address: 0x3f02000
+
+# -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- #
+
+sh54:
+    file: loaderblobs/usb/sh54loader.bin
+    address: 0xb00
+    encryption: MengLi
+    block-size: 512
+
+# sh55: there isn't a USB loader for it? but only UART?
+
+uc03:
+    # originally it's in some weird format,
+    # the file is a sydfs where there are two files - version and uboot.
+    # the uboot file is the actual loader binary
+    # also there's the usbboot.bin file laying around in the SDK
+    # which seems to implement the UBOOT1.00 protocol...
+    # the UART loader isn't.
+
+    file: loaderblobs/usb/uc03loader.bin
+    address: 0x0
+    encryption: MengLi
+    block-size: 512
+
+# -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- #
+
+bd19:
+    file: loaderblobs/usb/bd19loader.bin
+    address: 0x2000
+    encryption: MengLi
+    block-size: 512
+
+bd29:
+    file: loaderblobs/usb/bd29loader.bin
+    address: 0x2000
+    encryption: MengLi
+    block-size: 512
+
+# -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- #
+
+br17:
+    file: loaderblobs/usb/br17loader.bin
+    address: 0x2000
+    argument: 0x11
+
+br20:
+    file: loaderblobs/usb/br20loader.bin
+    address: 0x2000
+    argument: 0x7   # 0x1 = flash, 0x7 = OTP
+
+br21:
+    file: loaderblobs/usb/br21loader.bin
+    address: 0x2000
+    argument: 0x1   # 0x1 = flash, 0x7 = OTP
+
+br23:
+    file: loaderblobs/usb/br23loader.bin
+    address: 0x12000
+    encryption: MengLi
+    block-size: 512
+
+br25:
+    file: loaderblobs/usb/br25loader.bin
+    address: 0x12000
+    encryption: MengLi
+    block-size: 512
+
+br28:
+    file: loaderblobs/usb/br28loader.bin
+    address: 0x120000
+    encryption: MengLi
+    block-size: 512
+
+br30:
+    file: loaderblobs/usb/br30loader.bin
+    address: 0x2000
+    encryption: MengLi
+    block-size: 512
+
+br34:
+    file: loaderblobs/usb/br34loader.bin
+    address: 0x20000
+    encryption: MengLi
+    block-size: 512
+
+# -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- #
+
+wl80:
+    file: loaderblobs/usb/wl80loader.bin
+    address: 0x1c02000
+
+wl82:
+    file: loaderblobs/usb/wl82loader.bin
+    address: 0x1c02000
+    encryption: MengLi
+    block-size: 512

@@ -1,0 +1,50 @@
+# UART loaders definition
+
+sh54:
+    file: loaderblobs/uart/sh54loader.uart
+    address: 0xb00
+    encryption: MengLi
+
+sh55:
+    file: loaderblobs/uart/sh55loader.uart
+    address: 0x000
+    encryption: MengLi
+
+uc03:
+    file: loaderblobs/uart/uc03loader.uart
+    address: 0x101600
+    encryption: MengLi
+
+# -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- #
+
+bd19:
+    file: loaderblobs/uart/bd19loader.uart
+    address: 0x2000
+    encryption: MengLi
+
+bd29:
+    file: loaderblobs/uart/bd29loader.uart
+    address: 0x2000
+    encryption: MengLi
+
+# -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- #
+
+br23:
+    file: loaderblobs/uart/br23loader.uart
+    address: 0x12000
+    encryption: MengLi
+
+br25:
+    file: loaderblobs/uart/br25loader.uart
+    address: 0x12000
+    encryption: MengLi
+
+br30:
+    file: loaderblobs/uart/br30loader.uart
+    address: 0x2000
+    encryption: MengLi
+
+br34:
+    file: loaderblobs/uart/br34loader.uart
+    address: 0x20000
+    encryption: MengLi

@@ -1,0 +1,125 @@
+# Chips definition
+
+ac4100:
+    name:
+        - AC410N
+    arch: or1k
+
+bt15:
+    name:
+        - AC460N
+    arch: blackfin
+
+bc51:
+    name:
+        - AC461N
+    arch: pi32
+
+# -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- #
+
+dv12:
+    name:
+        - AC520N
+    arch: blackfin
+
+dv15:
+    name:
+        - AC521N
+    arch: pi32
+
+dv16:
+    name:
+        - AC540N
+        - AC560N
+    arch: pi32v2
+
+# -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- #
+
+sh54:
+    name:
+        - AD14N
+        - AD104N
+
+sh55:
+    name:
+        - AD15N
+        - AD105N
+
+uc03:
+    name:
+        - AD16N
+
+# -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- #
+
+bd19:
+    name:
+        - AC632N
+
+bd29:
+    name:
+        - AC630N
+
+# -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- #
+
+br17:
+    name:
+        - AC690N
+    arch: pi32
+
+br20:
+    name:
+        - AC691N
+    arch: pi32
+
+br21:
+    name:
+        - AC692N
+    arch: pi32
+
+br22:
+    name:
+        - AC693N
+
+br23:
+    name:
+        - AC635N
+        - AC695N
+    arch: pi32v2
+
+br25:
+    name:
+        - AC636N
+        - AC696N
+    arch: pi32v2
+
+br28:
+    name:
+        - AC701N
+    arch: pi32v2
+
+br30:
+    name:
+        - AC697N
+        - AD697N
+        - AC897N
+    arch: pi32v2
+
+br34:
+    name:
+        - AC638N
+        - AD698N
+    arch: pi32v2
+
+br36:
+    name:
+        - AC700N
+
+# -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- #
+
+wl80:
+    name:
+        - AC790N
+
+wl82:
+    name:
+        - AC791N
