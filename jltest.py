@@ -1,6 +1,6 @@
 from jl_stuff import *
 from jl_uboot import JL_UBOOT, SCSIException
-import argparse, cmd
+import argparse, cmd, time
 
 ap = argparse.ArgumentParser(description='JieLi tech test X999999',
                              epilog='Taiyoukouhatsudensystem ver1.25 by tsutsumin!')
@@ -333,6 +333,21 @@ families = {
 
 ###### ###### ###### ###### ###### ###### ###### ###### ###### ###### ######
 
+
+def makebar(ratio, length):
+    bratio = int(ratio * length)
+
+    bar = ''
+
+    if bratio > 0:
+        bar += '=' * (bratio - 1)
+        bar += '>'
+
+    bar += ' ' * (length - bratio)
+
+    return bar
+
+
 class DasShell(cmd.Cmd):
     intro = \
     """
@@ -399,16 +414,29 @@ class DasShell(cmd.Cmd):
 
             print()
 
+            dlength = 0
+
             while length > 0:
                 n = min(maxlen, length)
 
-                print("\rReading %x-%x..." % (address, address + length - 1), end='', flush=True)
-                fil.write(self.dev.flash_read(address, n))
+                #print("\rReading %x-%x..." % (address, address + length - 1), end='', flush=True)
+
+                t = time.time()
+                data = self.dev.flash_read(address, n)
+                t = time.time() - t
+
+                fil.write(data)
+
+                length -= n
+                dlength += n
+
+                ratio = dlength / (dlength + length)
+                print("\rReading %08x [%s] %3d%%" % (address, makebar(ratio, 40), ratio * 100), end='')
+                print(" %.2f KB/s" % (len(data) / 1000 / t), end='', flush=True)
 
                 address += n
-                length -= n
 
-            print("done!")
+            print("")
 
     #-------------------------------------
 
@@ -447,6 +475,7 @@ class DasShell(cmd.Cmd):
 
             xaddress = address
             xlength = length
+            dlength = 0
 
             while length > 0:
                 if length >= 0x10000 and (address & 0xffff) == 0:
@@ -456,31 +485,49 @@ class DasShell(cmd.Cmd):
 
                 n = min(length, block - (address % block))
 
-                print("\rErasing %x-%x..." % (address, address + length - 1), end='', flush=True)
+                #print("\rErasing %x-%x..." % (address, address + length - 1), end='', flush=True)
 
+                t = time.time()
                 if block > 0x1000: self.dev.flash_erase_block(address)
                 else:              self.dev.flash_erase_sector(address)
+                t = time.time() - t
+
+                length -= n
+                dlength += n
+
+                ratio = dlength / (dlength + length)
+                print("\rErasing %08x [%s] %3d%%" % (address, makebar(ratio, 40), ratio * 100), end='')
+                print(" %.2f KB/s" % (block / 1000 / t), end='', flush=True)
 
                 address += n
-                length -= n
 
             print()
 
             address = xaddress
             length = xlength
+            dlength = 0
 
             while length > 0:
                 block = fil.read(maxlen)
                 if block == b'': break
                 n = len(block)
 
-                print("\rWriting %x-%x..." % (address, address + length - 1), end='', flush=True)
+                #print("\rWriting %x-%x..." % (address, address + length - 1), end='', flush=True)
+
+                t = time.time()
                 self.dev.flash_write(address, block)
+                t = time.time() - t
+
+                length -= n
+                dlength += n
+
+                ratio = dlength / (dlength + length)
+                print("\rWriting %08x [%s] %3d%%" % (address, makebar(ratio, 40), ratio * 100), end='')
+                print(" %.2f KB/s" % (len(block) / 1000 / t), end='', flush=True)
 
                 address += n
-                length -= n
 
-            print("done!")
+            print("")
 
     #-------------------------------------
 
@@ -522,6 +569,8 @@ class DasShell(cmd.Cmd):
 
         print()
 
+        dlength = 0
+
         while length > 0:
             if length >= 0x10000 and (address & 0xffff) == 0:
                 block = 0x10000
@@ -532,13 +581,21 @@ class DasShell(cmd.Cmd):
 
             print("\rErasing %x-%x..." % (address, address + length - 1), end='', flush=True)
 
+            t = time.time()
             if block > 0x1000: self.dev.flash_erase_block(address)
             else:              self.dev.flash_erase_sector(address)
+            t = time.time() - t
+
+            length -= n
+            dlength += n
+
+            ratio = dlength / (dlength + length)
+            print("\rErasing %08x [%s] %3d%%" % (address, makebar(ratio, 40), ratio * 100), end='')
+            print(" %.2f KB/s" % (block / 1000 / t), end='', flush=True)
 
             address += n
-            length -= n
 
-        print("done!")
+        print("")
 
     #-------------------------------------
 
