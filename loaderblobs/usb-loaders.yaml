@@ -25,6 +25,11 @@ dv15:
     encryption: RxGp
     block-size: 512
 
+    # ~ guessed
+    # b0-b3   = dl mode (1 = flash)
+    # b4-b11  = speed (0 = 'default', else = clock divider)
+    argument: 0x0011
+
 dv16:
     file: loaderblobs/usb/dv16loader.bin
     address: 0x3f02000
@@ -71,17 +76,25 @@ bd29:
 br17:
     file: loaderblobs/usb/br17loader.bin
     address: 0x2000
-    argument: 0x11
+
+    # b0-b3   = dl mode (1 = flash, 4/5 = flash too??)
+    # b4-b11  = speed (0 = 'default', else = clock divider)
+    # b12-b13 = spi mode (...)
+    argument: 0x0011
 
 br20:
     file: loaderblobs/usb/br20loader.bin
     address: 0x2000
-    argument: 0x7   # 0x1 = flash, 0x7 = OTP
+
+    # b0-b3   = dl mode (1 = flash, 7 = OTP)
+    argument: 0x0007
 
 br21:
     file: loaderblobs/usb/br21loader.bin
     address: 0x2000
-    argument: 0x1   # 0x1 = flash, 0x7 = OTP
+
+    # b0-b3   = dl mode (1 = flash, 7 = OTP)
+    argument: 0x0001
 
 br23:
     file: loaderblobs/usb/br23loader.bin
