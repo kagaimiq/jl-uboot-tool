@@ -44,12 +44,12 @@ D+ | _____________________________-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_________
 ```
 
 **Or not ??** _I just checked on BR25, and it seems like this isn't ever the case, as it works even without the special power sequence,
-althrough the USB should be connected almost immediatly, as otherwise the USB device doesn't recognize and the chip seems to lock up
+although the USB should be connected almost immediatly, as otherwise the USB device doesn't recognize and the chip seems to lock up
 and it gets reset by the watchdog...
 Also the MaskROM code hints that there's nothing special about that - the bits are received on the timer ISR (which captures the rising edges on D+)
 and if the received bits matched 0x16EF then it pulls down both lines for at least 2ms (acknowledge and also inhibits the reception).._
 
-Also a thing worth noting is that BR23 seem to have some troubles with this method (althrough I didn't check that since i don't have any BR23 chip yet),
+Also a thing worth noting is that BR23 seem to have some troubles with this method (although I didn't check that since i don't have any BR23 chip yet),
 and so to enter the UBOOT mode on these chips a completely different way is used, which seem to use some hardware protocols like ISD.
 
 ## Having trouble on booting

@@ -21,5 +21,5 @@ This variant is provided by the "uboot.boot" bootloader (a second stage bootload
 as it provides the required functionality by itself, as, for example it can update the firmware (or the bluetooth settings)
 from the "bfu" files on the USB stick or SD card. (it can even recrypt the firmware from the 0xFFFF key into the one that's burned into the efuses!)
 
-Althrough on SDKs for newer chips (BR23/BR25/BR28/etc) the uboot.boot has shrunk down in size a lot, and so the only option that's left is the
+Although on SDKs for newer chips (BR23/BR25/BR28/etc) the uboot.boot has shrunk down in size a lot, and so the only option that's left is the
 UBOOT1.00 from the MaskROM.
