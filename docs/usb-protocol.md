@@ -81,8 +81,6 @@ struct JieLi_LoaderArgs {
 };
 ```
 
-In AC4100, however, the arguments are different: r3 passes the msd_send function, r4 passes the msd_recv function and r5 passes the msd_hook.
-
 The response to this command is returned after the code returns, and if the SCSI hook was set, then it will handle *all* requests *first*.
 If the hook returns zero, then this command will be handled by the "host".
 Otherwise it will be assumed that this command was handled by the hook.
