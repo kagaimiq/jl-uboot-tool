@@ -14,6 +14,10 @@ bc51:
 
 # -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- #
 
+dv12:
+    file: loaderblobs/usb/dv12loader.bin
+    address: 0x1f02000
+
 # this seems not to work
 #dv15:
 #    file: loaderblobs/usb/dv15loader.bin
