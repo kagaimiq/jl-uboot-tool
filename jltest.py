@@ -1,9 +1,10 @@
 from jl_stuff import *
 from jl_uboot import JL_UBOOT, SCSIException
 import argparse, cmd, time
+import pathlib, yaml
 
-ap = argparse.ArgumentParser(description='JieLi tech test X999999',
-                             epilog='Taiyoukouhatsudensystem ver1.25 by tsutsumin!')
+ap = argparse.ArgumentParser(description='JieLi tech test X1000000',
+                             epilog='JieLi technology gives us opportunity to make our fantasy go!')
 
 ap.add_argument('--device',
                 help='Specify a path to the JieLi disk (e.g. /dev/sg2 or \\\\.\\E:), ' +
@@ -25,314 +26,13 @@ args = ap.parse_args()
 
 ###### ###### ###### ###### ###### ###### ###### ###### ###### ###### ######
 
-families = {
-    "AC4100": {
-        "name": ["AC410N"],
+scriptroot = pathlib.Path(__file__).parent
 
-        "loader": {
-            "usb": {
-                "file": "loaderblobs/usb/ac4100loader.bin",
-                "address": 0x0009000
-            }
-        }
-    },
-
-    "BT15": {
-        "name": ["AC460N"],
-
-        "loader": {
-            "usb": {
-                "file": "loaderblobs/usb/bt15loader.bin",
-                "address": 0x0002000 # ?? maybe?
-            }
-        }
-    },
-
-    "BC51": {
-        "name": ["AC461N"],
-
-        "loader": {
-            "usb": {
-                "file": "loaderblobs/usb/bc51loader.bin",
-                "address": 0x0002000 # ?? maybe?
-            }
-        }
-    },
-
-    # -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- #
-
-    "DV12": {
-        "name": ["AC520N"],
-    },
-
-    "DV15": {
-        "name": ["AC521N"],
-
-        "loader": {
-            "usb": {
-                "file": "loaderblobs/usb/dv15loader.enc",
-                "address": 0x0f02000,
-                "encrypted": True
-            }
-        }
-    },
-
-    "DV16": {
-        "name": ["AC540N", "AC560N"],
-
-        "loader": {
-            "usb": {
-                "file": "loaderblobs/usb/dv16loader.bin",
-                "address": 0x3f02000
-            }
-        }
-    },
-
-    # -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- #
-
-    "SH54": {
-        "name": ["AD14N", "AD104N"],
-        "cryptoweirdo": True,
-
-        "loader": {
-            "usb": {
-                "file": "loaderblobs/usb/sh54loader.bin",
-                "address": 0x0000b00,
-                "encrypted": True
-            },
-            "uart": {
-                "file": "loaderblobs/uart/sh54loader.uart",
-                "address": 0x0000b00,
-                "encrypted": True
-            }
-        }
-    },
-
-    "SH55": {
-        "name": ["AD15N", "AD105N"],
-        "cryptoweirdo": True,
-
-        "loader": {
-            "uart": {
-                "file": "loaderblobs/uart/sh55loader.uart",
-                "address": 0x0000000,
-                "encrypted": True
-            }
-        }
-    },
-
-    "UC03": {
-        "name": ["AD16N"],
-        "cryptoweirdo": True,
-
-        "loader": {
-            #"usb": { # ... in some special format
-            #    "file": "loaderblobs/usb/uc03loader.bin",
-            #    "address": 0x0101600,
-            #    "encrypted": True
-            #},
-            "uart": {
-                "file": "loaderblobs/uart/uc03loader.uart",
-                "address": 0x0101600,
-                "encrypted": True
-            }
-        }
-    },
-
-    # -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- #
-
-    "BD19": {
-        "name": ["AC632N"],
-        "cryptoweirdo": True,
-
-        "loader": {
-            "usb": {
-                "file": "loaderblobs/usb/bd19loader.bin",
-                "address": 0x0002000,
-                "encrypted": True
-            },
-            "uart": {
-                "file": "loaderblobs/uart/bd19loader.uart",
-                "address": 0x0002000,
-                "encrypted": True
-            }
-        }
-    },
-
-    "BD29": {
-        "name": ["AC630N"],
-        "cryptoweirdo": True,
-
-        "loader": {
-            "usb": {
-                "file": "loaderblobs/usb/bd29loader.bin",
-                "address": 0x0002000,
-                "encrypted": True
-            }
-        }
-    },
-
-    # -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- #
-
-    "BR17": {
-        "name": ["AC690N"],
-
-        "loader": {
-            "usb": {
-                "file": "loaderblobs/usb/br17loader.bin",
-                "address": 0x0002000,
-                "argument": 0x11
-            }
-        }
-    },
-
-    "BR20": {
-        "name": ["AC691N"],
-
-        "loader": {
-            "usb": {
-                "file": "loaderblobs/usb/br20loader.bin",
-                "address": 0x0002000,
-                "argument": 0x0
-            }
-        }
-    },
-
-    "BR21": {
-        "name": ["AC692N"],
-
-        "loader": {
-            "usb": {
-                "file": "loaderblobs/usb/br21loader.bin",
-                "address": 0x0002000,
-                "argument": 0x1    # 0x1 = flash, 0x7 = OTP
-            }
-        }
-    },
-
-    "BR22": {
-        "name": ["AC693N"],
-    },
-
-    "BR23": {
-        "name": ["AC635N", "AC695N"],
-        "cryptoweirdo": True,
-
-        "loader": {
-            "usb": {
-                "file": "loaderblobs/usb/br23loader.bin",
-                "address": 0x0012000,
-                "encrypted": True
-            },
-            "uart": {
-                "file": "loaderblobs/uart/br23loader.uart",
-                "address": 0x0012000,
-                "encrypted": True
-            }
-        }
-    },
-
-    "BR25": {
-        "name": ["AC636N", "AC696N"],
-        "cryptoweirdo": True,
-
-        "loader": {
-            "usb": {
-                "file": "loaderblobs/usb/br25loader.bin",
-                "address": 0x0012000,
-                "encrypted": True
-            },
-            "uart": {
-                "file": "loaderblobs/uart/br25loader.uart",
-                "address": 0x0012000,
-                "encrypted": True
-            }
-        }
-    },
-
-    "BR28": {
-        "name": ["AC701N"],
-        "cryptoweirdo": True,
-
-        "loader": {
-            "usb": {
-                "file": "loaderblobs/usb/br28loader.bin",
-                "address": 0x0120000,
-                "encrypted": True
-            }
-        }
-    },
-
-    "BR30": {
-        "name": ["AC697N", "AD697N", "AC897N"],
-        "cryptoweirdo": True,
-
-        "loader": {
-            "usb": {
-                "file": "loaderblobs/usb/br30loader.bin",
-                "address": 0x0002000,
-                "encrypted": True
-            },
-            "uart": {
-                "file": "loaderblobs/uart/br30loader.uart",
-                "address": 0x0002000,
-                "encrypted": True
-            }
-        }
-    },
-
-    "BR34": {
-        "name": ["AC638N", "AD698N"],
-        "cryptoweirdo": True,
-
-        "loader": {
-            "usb": {
-                "file": "loaderblobs/usb/br34loader.bin",
-                "address": 0x0020000,
-                "encrypted": True
-            },
-            "uart": {
-                "file": "loaderblobs/uart/br34loader.uart",
-                "address": 0x0020000,
-                "encrypted": True
-            }
-        }
-    },
-
-    "BR36": {
-        "name": ["AC700N"],
-        "cryptoweirdo": True,
-    },
-
-    # -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- #
-
-    "WL80": {
-        "name": ["AC790N"],
-
-        "loader": {
-            "usb": {
-                "file": "loaderblobs/usb/wl80loader.bin",
-                "address": 0x1C02000 # ?? ... somewhere in 0x1C0XXXX
-            }
-        }
-    },
-
-    "WL82": {
-        "name": ["AC791N"],
-        "cryptoweirdo": True,
-
-        "loader": {
-            "usb": {
-                "file": "loaderblobs/usb/wl82loader.bin",
-                "address": 0x1C02000, # ?? ... somewhere in 0x1C0XXXX
-                "encrypted": True
-            }
-        }
-    },
-}
+JL_chips        = yaml.load(open(scriptroot/'loaderblobs'/'chips.yaml'),        Loader=yaml.SafeLoader)
+JL_usb_loaders  = yaml.load(open(scriptroot/'loaderblobs'/'usb-loaders.yaml'),  Loader=yaml.SafeLoader)
+JL_uart_loaders = yaml.load(open(scriptroot/'loaderblobs'/'uart-loaders.yaml'), Loader=yaml.SafeLoader)
 
 ###### ###### ###### ###### ###### ###### ###### ###### ###### ###### ######
-
 
 def makebar(ratio, length):
     bratio = int(ratio * length)
@@ -346,6 +46,37 @@ def makebar(ratio, length):
     bar += ' ' * (length - bratio)
 
     return bar
+
+def largedigits(number, count=-1):
+    chars = (
+        ('  _____ ',' |   / |',' |  /  |',' |_/___|'),
+        ('    _   ','   /|   ','    |   ','  __|__ '),
+        ('  _____ ',' |     |','  _____|',' |______'),
+        ('  _____ ','    ___|','       |',' ______|'),
+        ('        ',' |    | ',' |____|_','      | '),
+        ('  ______',' |_____ ','       |',' ______|'),
+        ('  ______',' |_____ ',' |     |',' |_____|'),
+        ('  _____ ',' |     |','       |','       |'),
+        ('  _____ ',' |_____|',' |     |',' |_____|'),
+        ('  _____ ',' |     |',' |_____|',' ______|'),
+        ('  _____ ',' |_____|',' |     |',' |     |'),
+        ('  ______',' |_____/',' |     |',' |_____|'),
+        ('  _____ ',' |     |',' |      ',' |______'),
+        ('  _____ ',' |     |',' |     |',' |____/ '),
+        ('  ______',' |_____ ',' |      ',' |______'),
+        ('  ______',' |_____ ',' |      ',' |      '),
+    )
+
+    for iln in range(4):
+        ln = ''
+
+        for i in range(count):
+            ln = chars[(number >> (i * 4)) & 0xf][iln] + ln
+
+        print(ln)
+
+    print()
+
 
 
 class DasShell(cmd.Cmd):
@@ -374,6 +105,62 @@ class DasShell(cmd.Cmd):
     def do_exit(self, args):
         """Get out of the shell"""
         return True
+
+    #------#------#------#------#------#------#------#------#------#------#
+
+    def do_chipkey(self, args):
+        """Read the chip key from the chip
+        chipkey
+        """
+
+        try:
+            key = dev.chip_key()
+        except SCSIException:
+            print("Failed to get the chip key")
+            return
+
+        print('Your chip key is...')
+
+        largedigits(key, 4)
+
+        if key == 0xffff:
+            print("All clean!")
+        elif key == 0x0000:
+            print("All burnt out! W-What? Yes! Maybe something went wrong?!")
+        else:
+            print("There's something programmed there!")
+
+    def do_onlinedev(self, args):
+        """Get the device type and info we're working with
+        onlinedev
+        """
+
+        try:
+            info = dev.online_device()
+        except SCSIException:
+            print("Failed to get the online device info")
+            return
+
+        devtypes = {
+            0x00: 'None',
+            0x01: 'SDRAM',
+            0x02: 'SD card',
+            0x03: 'SPI NOR flash (on SPI0)',
+            0x04: 'SPI NAND flash (on SPI0)',
+            0x05: 'OTP',
+            0x10: 'SD card (2)',
+            0x11: 'SD card (3)',
+            0x12: 'SD card (4)',
+            0x13: 'Something 0x13',
+            0x14: 'Something 0x14',
+            0x15: 'Something 0x15',
+            0x16: 'SPI NOR flash (on SPI1)',
+            0x17: 'SPI NOR flash (on SPI1)',
+        }
+
+        print('Device type:\n  0x%02x [%s]' % (info['type'], devtypes.get(info['type'])))
+        print("\nDevice ID:")
+        largedigits(info['id'], 8)
 
     #------#------#------#------#------#------#------#------#------#------#
 
@@ -579,7 +366,7 @@ class DasShell(cmd.Cmd):
 
             n = min(length, block - (address % block))
 
-            print("\rErasing %x-%x..." % (address, address + length - 1), end='', flush=True)
+            #print("\rErasing %x-%x..." % (address, address + length - 1), end='', flush=True)
 
             t = time.time()
             if block > 0x1000: self.dev.flash_erase_block(address)
@@ -863,12 +650,12 @@ else:
 with JL_UBOOT(device) as dev:
     vendor, product, prodrev = dev.inquiry()
 
-    chipname = vendor
-    if chipname not in families:
+    chipname = vendor.lower()
+    if chipname not in JL_chips:
         print("Oh well, chip %s is either not supported or is invalid." % chipname)
         exit(2)
 
-    family = families[chipname]
+    family = JL_chips[chipname]
     print('Chip: %s (%s)' % (chipname, ', '.join(family['name'])))
 
     runtheloader = False
@@ -896,30 +683,20 @@ with JL_UBOOT(device) as dev:
         else:
             print("Using builtin loader collection")
 
-            if 'loader' not in family:
-                print("No loaders available.")
-                exit(3)
-
-            if 'usb' not in family['loader']:
+            if chipname not in JL_usb_loaders:
                 print("No USB loader is available.")
                 exit(3)
 
-            loader = family['loader']['usb']
+            loader = JL_usb_loaders[chipname]
 
         ###########
 
-        with open(loader['file'], 'rb') as f:
+        with open(scriptroot/loader['file'], 'rb') as f:
             addr = loader['address']
-
-            encrypted = loader.get('encrypted', False)
-            weirdo = family.get('cryptoweirdo', False)
 
             while True:
                 block = f.read(loader.get('blocksize', 512))
                 if block == b'': break
-
-                if (not encrypted and weirdo) or (encrypted and not weirdo):
-                    block = jl_crypt_mengli(block)
 
                 dev.mem_write(addr, block)
 
@@ -939,10 +716,28 @@ with JL_UBOOT(device) as dev:
 
     #-------------------------
 
-    print("----------------:------------------------")
-    print("Online device   : id=%(id)x type=%(type)d" % dev.online_device())
-    print("Chip key        : %04x" % dev.chip_key())
-    print("Flash page size : %d" % dev.flash_max_page_size())
+    ds = DasShell(dev)
+
     print("----------------:------------------------")
 
-    DasShell(dev).cmdloop()
+    try:
+        print("Online device   : id=%(id)x type=%(type)d" % dev.online_device())
+    except SCSIException:
+        print("Failed to get online device info.. TODO")
+
+    try:
+        print("Chip key        : %04x" % dev.chip_key())
+    except SCSIException:
+        print("Failed to get chip key.. TODO")
+
+    try:
+        print("Flash page size : %d" % dev.flash_max_page_size())
+    except SCSIException:
+        print("Failed to get flash page size.. TODO")
+
+    print("----------------:------------------------")
+
+    ds.onecmd('onlinedev')
+    ds.onecmd('chipkey')
+
+    ds.cmdloop()
