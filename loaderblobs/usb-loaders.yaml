@@ -100,6 +100,14 @@ br21:
     # b0-b3   = dl mode (1 = flash, 7 = OTP)
     argument: 0x0001
 
+br22:
+    file: loaderblobs/usb/br22loader.bin
+    address: 0x2000
+
+    #?? maybe.. just assume!
+    # b0-b3   = dl mode (1 = flash, 7 = OTP)
+    argument: 0x0001
+
 br23:
     file: loaderblobs/usb/br23loader.bin
     address: 0x12000
