@@ -8,7 +8,7 @@ ac4100:
 bt15:
     name:
         - AC460N
-    arch: blackfin
+    arch: blackfin-dv10
 
 bc51:
     name:
@@ -20,12 +20,12 @@ bc51:
 dv12:
     name:
         - AC520N
-    arch: blackfin
+    arch: blackfin-dv12
 
 dv15:
     name:
         - AC521N
-    arch: pi32
+    arch: pi32v2
 
 dv16:
     name:
@@ -79,6 +79,7 @@ br21:
 br22:
     name:
         - AC693N
+    arch: pi32v2
 
 br23:
     name:
@@ -101,6 +102,7 @@ br30:
     name:
         - AC697N
         - AD697N
+        - JL697N
         - AC897N
     arch: pi32v2
 
@@ -113,6 +115,8 @@ br34:
 br36:
     name:
         - AC700N
+        - JL700N
+    arch: pi32v2
 
 # -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- #
 
