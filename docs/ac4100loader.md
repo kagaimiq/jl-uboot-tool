@@ -1,5 +1,7 @@
 # AC4100 loader
 
+This describes commands and their behavior specific to the AC4100 loader.
+
 ## Opcodes
 
 - 0xFB = "Write Flash"
@@ -98,7 +100,8 @@ Simply receives data into the specified memory location
 Reads the flash's JECEC ID (via command 0x9F, receives 3 bytes)
 
 - Command: `FC/FD 00 -- -- -- --`
-- Data out: `FC 00 -- -- -- -- -- -- -- -- -- -- -- -- -- --`
+- Data out: `FC 00 II:ii:ii -- -- -- -- -- -- -- -- -- --`
+  * II:ii:ii = Flash JEDEC ID
 
 ### something2
 

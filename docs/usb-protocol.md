@@ -1,7 +1,9 @@
 # USB protocol
 
-The chip under the UBOOT mode is visible on the USB bus as an ordinary mass storage device,
-and so it uses custom SCSI commands to do the stuff.
+A chip under UBOOT mode 
+
+# Commands & stuff
+
 
 ## Opcodes
 
@@ -87,6 +89,20 @@ Otherwise it will be assumed that this command was handled by the hook.
 
 The hook gets reset when this command is executed, before calling the code.
 
+The argument field is understood by the stock loaders this way:
+- bit0..3 = Target memory (dlmode)
+  * 1 = SPI flash
+  * 7 = OTP
+- bit4..11 = Clock speed
+  * 0 = div1
+  * >0 = div1..255
+  * Clock base is usually 48 MHz
+- bit12..15 = SPI mode
+  * 0 = Half-duplex SPI (2wire 1bit)
+  * 1 = SPI (3wire 1bit)
+  * 2 = DSPI (3wire 2bit)
+  * 3 = QSPI (3wire 4bit)
+
 ### Write memory (encrypted)
 
 **Note: (at least) DV15-specific**
@@ -104,53 +120,9 @@ Look at the *dv15loader.enc* for an example of data transferred via this command
 
 ## Loader/UBOOT2.00 commands
 
-Additional command set provided by the loader binary or an UBOOT2.00 variant (e.g. from uboot.boot)
-
-### Erase flash block (64k)
-
-- Command: `FB 00 AA:aa:aa:aa`
-  * AA:aa:aa:aa = Address of the block
-- Data out: `FB 00 SS -- -- -- -- -- -- -- -- -- -- -- -- --`
-  * SS = Erase status (0 = succeed, else = failed)
-
-### Erase flash sector (4k)
-
-- Command: `FB 01 AA:aa:aa:aa`
-  * AA:aa:aa:aa = Address of the sector
-- Data out: `FB 01 SS -- -- -- -- -- -- -- -- -- -- -- -- --`
-  * SS = Erase status (0 = succeed, else = failed)
-
-### Erase flash chip
-
-- Command: `FB 02 -- -- -- --`
-- Data out: `FB 02 SS -- -- -- -- -- -- -- -- -- -- -- -- --`
-  * SS = Erase status (0 = succeed, else = failed)
-
-*Note:* seems to be not always present..
-
-### Write flash
-
-- Command: `FB 04 AA:aa:aa:aa SS:ss`
-  * AA:aa:aa:aa = Address
-  * SS:ss = Size of data
-- Data in: data to be written
-
-### Read flash
-
-- Command: `FD 05 AA:aa:aa:aa SS:ss`
-  * AA:aa:aa:aa = Address
-  * SS:ss = Size of data
-- Data out: data that was read
-
-### Get chipkey
-
-- Command: `FC 09 AA:aa:aa:aa`
-  * AA:aa:aa:aa = magic value, for AC69xx it's 0xAC6900
-- Data out: `FC 09 -- -- -- -- KK:kk -- -- -- -- -- -- -- --`
-  * KK:kk = Chipkey
-
-The chipkey is returned encrypted with the "MengLi" encryption,
-the little-endian value gets encrypted then put there in big-endian.
+This is common overview of the commands, for more specfic details for each loader, check out:
+- [AC4100 loader](ac4100-loader.md)
+- [BR17 loader](br17-loader.md)
 
 ### Get online device
 
@@ -174,30 +146,4 @@ the little-endian value gets encrypted then put there in big-endian.
   * bb:bb:bb:BB = Device ID
     * for SPI (NOR) flash it's the JEDEC ID returned by the 0x9F command
     * for OTP, it is 0x4f545010 "OTP\x10"
-    * for SD card, it is 0x73647466 "sdtf" (maybe)
-
-### Reset
-
-- Command: `FC 0C AA:aa:aa:aa`
-  * AA:aa:aa:aa = reset code? set to 1..
-- Data out: `FC 0C -- -- -- -- -- -- -- -- -- -- -- -- -- --`
-
-### Burn chipkey
-
-**WARNING:** BE CAREFUL, THIS OPERATION IS IRREVERSIBLE!
-
-Don't know yet..
-
-### Get flash CRC16
-
-- Command: `FC 13 AA:aa:aa:aa SS:ss`
-  * AA:aa:aa:aa = Address
-  * SS:ss = Size
-- Data out: `FC 13 CC:cc -- -- -- -- -- -- -- -- -- -- -- --`
-  * CC:cc = Calculated CRC16
-
-### Get flash max page size
-
-- Command: `FC 14 -- -- -- --`
-- Data out: `FC 14 SS:ss:ss:ss -- -- -- -- -- -- -- -- -- --`
-  * SS:ss:ss:ss = Page size (or maximum amount of data that can be read/written at once)
+    * for SD card, it is 0x73647466 "sdtf" (maybe - assumed)
