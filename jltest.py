@@ -607,45 +607,11 @@ if args.device is not None:
     device = args.device
 
 else:
-    from jldevfind import FindJLDevs
+    from jldevfind import choose_jl_device
 
-    devs = FindJLDevs()
-
-    if len(devs) == 0:
-        print('No devices found')
+    device = choose_jl_device()
+    if device is None:
         exit(1)
-
-    elif len(devs) == 1:
-        print('Found some device: %s' % devs[0]['name'])
-        device = devs[0]['path']
-
-    else:
-        print('Found %d devices, please choose the one you want to use right now, or quit (q)' % len(devs))
-
-        for i, dev in enumerate(devs):
-            print('%3d: %s' % (i, dev['name']))
-
-        print()
-
-        while True:
-            inp = input('[0..%d|q]: ' % (len(devs) - 1)).strip()
-
-            if inp == '': continue
-
-            if inp.lower().startswith('q'):
-                exit()
-
-            try:
-                num = int(inp)
-            except ValueError:
-                print('Please enter a number!')
-                continue
-
-            try:
-                device = devs[num]['path']
-                break
-            except IndexError:
-                print('Please enter a number in range 0..%d!' % (len(devs) - 1))
 
 with JL_UBOOT(device) as dev:
     vendor, product, prodrev = dev.inquiry()
