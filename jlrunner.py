@@ -5,8 +5,7 @@ import argparse
 ap = argparse.ArgumentParser(description='Load code into memory and execute it')
 
 ap.add_argument('--device',
-                help='Path to the JieLi disk (e.g. /dev/sg2 or \\\\.\\E:)',
-                required=True)
+                help='Path to the JieLi disk (e.g. /dev/sg2 or \\\\.\\E:)')
 
 ap.add_argument('--arg', default='0x4777',
                 help="Numerical argument that's passed to the code (default: %(default)s)")
@@ -28,7 +27,17 @@ ap.add_argument('file',
 
 args = ap.parse_args()
 
-with JL_UBOOT(args.device) as dev:
+if args.device is not None:
+    device = args.device
+
+else:
+    from jldevfind import choose_jl_device
+
+    device = choose_jl_device()
+    if device is None:
+        exit(1)
+
+with JL_UBOOT(device) as dev:
     with open(args.file, 'rb') as f:
         addr = int(args.address, 0)
 
