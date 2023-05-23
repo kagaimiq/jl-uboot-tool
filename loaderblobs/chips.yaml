@@ -91,6 +91,7 @@ br25:
     name:
         - AC636N
         - AC696N
+        - AC608N
     arch: pi32v2
 
 br28:
