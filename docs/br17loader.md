@@ -35,6 +35,7 @@ This describes commands and their behavior specific to the br17loader (v204).
 
 - 0x03 = [Read status](#read-status)
 - 0x09 = [Read (chip)key](#read-key)
+- 0x0A = [Get online device](#get-online-device)
 - 0x0B = [Read ID](#read-id)
 - 0x0C = [Run app](#run-app)
 - 0x0D = [Set flash command](#set-flash-command)
