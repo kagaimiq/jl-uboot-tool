@@ -174,7 +174,7 @@ class DasShell(cmd.Cmd):
         """
 
         try:
-            key = 0x077a #self.dev.chip_key()
+            key = self.dev.chip_key()
         except SCSIException:
             print("Failed to get the chip key")
             return
