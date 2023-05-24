@@ -8,7 +8,7 @@ This describes commands and their behavior specific to the br17loader (v204).
   * 1 = SPI flash
 - bit4..11 = Clock speed
   * 0 = div1
-  * >0 = div1..255
+  * 1..255 = div1..255
   * Clock base is usually 48 MHz
 - bit12..15 = SPI mode
   * 0 = Half-duplex SPI (2wire 1bit)

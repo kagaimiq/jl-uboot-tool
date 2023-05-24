@@ -72,36 +72,44 @@ as well as the peripheral registers (it absolutely will mess up these!)
   * AA:aa:aa:aa = Memory address
   * BB:bb = Argument
 
+The response to this command is sent after the code returns back. (so that the host may wait for e.g. when the loader intializes everything)
+
 In most chips, the loader is called with the register r0 holding a pointer to the "arglist", which has the following structure:
 ```c
-struct JieLi_LoaderArgs {
-	void (*msd_send)(void *ptr, int len);		// send data
-	void (*msd_recv)(void *ptr, int len);		// receive data
-	int (**msd_hook)(struct usb_msc_cbw *cbw);	// SCSI command hook
+struct jl_loader_args {
+	void (*msd_send)(void *, int);			// send data
+	void (*msd_recv)(void *, int);			// receive data
+	int (**msd_hook)(struct usb_msc_cbw *, void *);	// SCSI command hook
 	uint32_t arg;		// a passed argument
 	uint32_t wtw_10;	// ? toggles on BR17, always zero on BR25..
 };
 ```
 
-The response to this command is returned after the code returns, and if the SCSI hook was set, then it will handle *all* requests *first*.
-If the hook returns zero, then this command will be handled by the "host".
-Otherwise it will be assumed that this command was handled by the hook.
+The target code can set a SCSI command hook which will receive all requests first,
+and if it returned a nonzero, then this command is not processed by the USB stack.
 
-The hook gets reset when this command is executed, before calling the code.
+The hook is called with the pointer to the CBW structure in r0, and a pointer to a temporary buffer (usually 64 bytes long) in r1.
 
-The argument field is understood by the stock loaders this way:
+This hook also gets reset each time this command executes, before calling the code.
+
+The argument field is understood by the vendor's loaders this way:
 - bit0..3 = Target memory (dlmode)
   * 1 = SPI flash
   * 7 = OTP
 - bit4..11 = Clock speed
   * 0 = div1
-  * >0 = div1..255
+  * 1..255 = div1..255
   * Clock base is usually 48 MHz
 - bit12..15 = SPI mode
   * 0 = Half-duplex SPI (2wire 1bit)
   * 1 = SPI (3wire 1bit)
   * 2 = DSPI (3wire 2bit)
   * 3 = QSPI (3wire 4bit)
+
+**Please note** that the loader's variant of this command is a little bit different:
+- The response is sent *before* calling the code.
+- There is no arglist or stuff like that.
+- There's no SCSI hooks too.
 
 ### Write memory (encrypted)
 
