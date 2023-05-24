@@ -1,26 +1,27 @@
 from jl_stuff import *
-from jl_uboot import JL_UBOOT, SCSIException
+from jl_uboot import JL_UBOOT, JL_Loader, SCSIException
 import argparse, cmd, time
 import pathlib, yaml
 
-ap = argparse.ArgumentParser(description='JieLi tech test X1000000',
-                             epilog='JieLi technology gives us opportunity to make our fantasy go!')
+ap = argparse.ArgumentParser(description='JieLi UBOOT tool',
+                             epilog='TaiyouKouhaTsuden System ver.125 by TsutsuMin')
+
+def anyint(s):
+    return int(s, 0)
 
 ap.add_argument('--device',
                 help='Specify a path to the JieLi disk (e.g. /dev/sg2 or \\\\.\\E:), ' +
                      'if not specified, then it tries to search for devices.')
 
-ap.add_argument('--loader',
-                help='Custom loader binary load address and file',
-                metavar=('ADDR','FILE'), nargs=2)
+ap.add_argument('--loader-arg', type=anyint, metavar='ARG',
+                help="Loader's numerical argument (overrides the default)")
 
-ap.add_argument('--loader-arg',
-                help="Loader's numerical argument (overrides the default)",
-                metavar='ARG')
+ap.add_argument('--custom-loaders', metavar='FILE',
+                help='Path to the custom loader spec YAML file. ' +
+                     'If something goes wrong when loading it, then the builtin loader spec is used.')
 
-ap.add_argument('--force-loader',
-                help="Explicitly run the loader, even when it's not needed",
-                action='store_true')
+ap.add_argument('--force-loader', action='store_true',
+                help="Run the loader even when it's not needed")
 
 args = ap.parse_args()
 
@@ -32,7 +33,28 @@ JL_chips        = yaml.load(open(scriptroot/'loaderblobs'/'chips.yaml'),        
 JL_usb_loaders  = yaml.load(open(scriptroot/'loaderblobs'/'usb-loaders.yaml'),  Loader=yaml.SafeLoader)
 JL_uart_loaders = yaml.load(open(scriptroot/'loaderblobs'/'uart-loaders.yaml'), Loader=yaml.SafeLoader)
 
+print('** %d chips, %d USB loaders, %d UART loaders **' % (len(JL_chips), len(JL_usb_loaders), len(JL_uart_loaders)))
+
 ###### ###### ###### ###### ###### ###### ###### ###### ###### ###### ######
+
+dev_type_strs = {
+    0x00: 'None',
+    0x01: 'SDRAM',
+    0x02: 'SD card',
+    0x03: 'SPI NOR flash on SPI0',
+    0x04: 'SPI NAND flash on SPI0',
+    0x05: 'OTP',
+    0x10: 'SD card 2',
+    0x11: 'SD card 3',
+    0x12: 'SD card 4',
+    0x13: 'Something 0x13',
+    0x14: 'Something 0x14',
+    0x15: 'Something 0x15',
+    0x16: 'SPI NOR flash on SPI1',
+    0x17: 'SPI NOR flash on SPI1',
+}
+
+
 
 def makebar(ratio, length):
     bratio = int(ratio * length)
@@ -47,31 +69,62 @@ def makebar(ratio, length):
 
     return bar
 
-def largedigits(number, count=-1):
-    chars = (
-        ('  _____ ',' |   / |',' |  /  |',' |_/___|'),
-        ('    _   ','   /|   ','    |   ','  __|__ '),
-        ('  _____ ',' |     |','  _____|',' |______'),
-        ('  _____ ','    ___|','       |',' ______|'),
-        ('        ',' |    | ',' |____|_','      | '),
-        ('  ______',' |_____ ','       |',' ______|'),
-        ('  ______',' |_____ ',' |     |',' |_____|'),
-        ('  _____ ',' |     |','       |','       |'),
-        ('  _____ ',' |_____|',' |     |',' |_____|'),
-        ('  _____ ',' |     |',' |_____|',' ______|'),
-        ('  _____ ',' |_____|',' |     |',' |     |'),
-        ('  ______',' |_____/',' |     |',' |_____|'),
-        ('  _____ ',' |     |',' |      ',' |______'),
-        ('  _____ ',' |     |',' |     |',' |____/ '),
-        ('  ______',' |_____ ',' |      ',' |______'),
-        ('  ______',' |_____ ',' |      ',' |      '),
-    )
+def print_largeletters(string):
+    string = string.upper()
 
-    for iln in range(4):
+    chars = {
+        '0': ('  _____ ', ' |   / |', ' |  /  |', ' |_/___|'),
+        '1': ('    _   ', '   /|   ', '    |   ', '  __|__ '),
+        '2': ('  _____ ', ' |     |', '  _____|', ' |______'),
+        '3': ('  _____ ', '    ___|', '       |', ' ______|'),
+        '4': ('        ', ' |    | ', ' |____|_', '      | '),
+        '5': ('  ______', ' |_____ ', '       |', ' ______|'),
+        '6': ('  ______', ' |_____ ', ' |     |', ' |_____|'),
+        '7': ('  _____ ', ' |     |', '       |', '       |'),
+        '8': ('  _____ ', ' |_____|', ' |     |', ' |_____|'),
+        '9': ('  _____ ', ' |     |', ' |_____|', ' ______|'),
+        'A': ('  _____ ', ' |_____|', ' |     |', ' |     |'),
+        'B': ('  ______', ' |_____/', ' |     |', ' |_____|'),
+        'C': ('  _____ ', ' |     |', ' |      ', ' |______'),
+        'D': ('  _____ ', ' |     |', ' |     |', ' |____/ '),
+        'E': ('  ______', ' |_____ ', ' |      ', ' |______'),
+        'F': ('  ______', ' |_____ ', ' |      ', ' |      '),
+        'G': ('  _____ ', ' |      ', ' |  ___ ', ' |_____|'),
+        'H': ('        ', ' |_____|', ' |     |', ' |     |'),
+        'I': (' _______', '    |   ', '    |   ', ' ___|___'),
+        'J': ('    ___ ', '       |', '       |', ' |_____|'),
+        'K': ('        ', ' |___/  ', ' |   \  ', ' |     \\'),
+        'L': ('        ', ' |      ', ' |      ', ' |_____|'),
+        'M': (' ______ ', ' |  |  |', ' |     |', ' |     |'),
+        'N': ('        ', ' |\    |', ' |  \  |', ' |    \|'),
+        'O': ('  _____ ', ' |     |', ' |     |', ' |_____|'),
+        'P': ('  ______', ' |_____/', ' |      ', ' |      '),
+        'Q': ('  _____ ', ' |     |', ' |   \ |', ' |____\|'),
+        'R': ('  ______', ' |_____/', ' |     |', ' |     |'),
+        'S': (' _______', ' \_____ ', '       |', ' ______|'),
+        'T': (' _______', '    |   ', '    |   ', '    |   '),
+        'U': ('        ', ' |     |', ' |     |', ' |_____|'),
+        'V': ('        ', ' |     |', '  \   / ', '   \_/  '),
+        'W': ('        ', ' |     |', ' |  |  |', ' |__|__|'),
+        'X': ('        ', ' \     /', '  >---< ', ' /     \\'),
+        'Y': ('        ', ' |     |', ' |_____|', ' ______|'),
+        'Z': (' _______', '    ___/', '   /    ', ' _/_____'),
+    }
+
+    height = 0
+
+    for c in string:
+        char = chars.get(c, [])
+        height = max(height, len(char))
+
+    for line in range(height):
         ln = ''
 
-        for i in range(count):
-            ln = chars[(number >> (i * 4)) & 0xf][iln] + ln
+        for c in string:
+            char = chars.get(c, [])
+
+            if line >= len(char): continue
+            ln += char[line]
 
         print(ln)
 
@@ -82,16 +135,17 @@ def largedigits(number, count=-1):
 class DasShell(cmd.Cmd):
     intro = \
     """
-  .--------------------------------------------------.
-  |     _____________                                |
-  |    /___  __  ___/                                |
-  |       / / / /     _______                        |
-  |  __  / / / /        | |    | | |_   _   _  |_    |
-  | / /_/ / / /____   |_| |__  |_| |_| |_| |_| |_    |
-  | \____/ /______/                                  |
-  |                                                  |
-  | JieLi tech console. Type 'help' or '?' for help. |
-  '--------------------------------------------------'
+  =========================================================
+  .-------------------.
+  |     _____________ | .------------------------------.
+  |    /___  __  ___/ | |       JieLi UBOOT Tool
+  |       / / / /     | |        - Das Shell -
+  |  __  / / / /      | `------------------------------.
+  | / /_/ / / /____   |    -*- JieLi tech console -*-  |
+  | \____/ /______/   |   Type 'help' or '?' for help. |
+  |                   | `------------------------------'
+  `-------------------'
+  =========================================================
     """
     prompt = '=>JL: '
 
@@ -99,11 +153,17 @@ class DasShell(cmd.Cmd):
         super(DasShell, self).__init__()
         self.dev = dev
 
+
+        self.bufsize = self.dev.usb_buffer_size()
+
+
+
     def emptyline(self):
         pass
 
     def do_exit(self, args):
         """Get out of the shell"""
+        print("Bye!")
         return True
 
     #------#------#------#------#------#------#------#------#------#------#
@@ -114,21 +174,124 @@ class DasShell(cmd.Cmd):
         """
 
         try:
-            key = dev.chip_key()
+            key = 0x077a #self.dev.chip_key()
         except SCSIException:
             print("Failed to get the chip key")
             return
 
         print('Your chip key is...')
 
-        largedigits(key, 4)
+        print_largeletters('%04X' % key)
 
         if key == 0xffff:
-            print("All clean!")
+            print("All bits are nice and clean! You're good to go!")
         elif key == 0x0000:
-            print("All burnt out! W-What? Yes! Maybe something went wrong?!")
+            print("All bits of your chipkey seems to be burnt out!")
+            print("Maybe something gone wrong? Or this is what it should be?")
         else:
-            print("There's something programmed there!")
+            nbits = bin(key).count('1')
+            print("There are %d bits intact!" % nbits)
+
+    def do_burnchipkey(self, args):
+        """ Burn the chipkey into the chip
+        burnchipkey <key>
+        """
+
+        args = args.split(maxsplit=1)
+
+        if len(args) < 1:
+            print("Not enough arguments!")
+            self.do_help('burnchipkey')
+            return
+
+        try:
+            newkey = int(args[0], 0) & 0xffff
+        except ValueError:
+            print("<key> [%s] is not a number!" % args[0])
+            return
+
+        try:
+            key = self.dev.chip_key()
+        except SCSIException:
+            print("Failed to get the chip key")
+            return
+
+        print('Your current chip key:')
+        print_largeletters('%04X' % key)
+
+        print("Chip key you're going to burn:")
+        print_largeletters('%04X' % newkey)
+
+        realkey = newkey & key
+
+        #
+        # Print the messages..
+        #
+        if key == 0x0000:
+            if newkey == 0xffff:
+                print("Nice try. Do you think you can ever do that?")
+            elif newkey == 0x0000:
+                print("You chipkey is already burned to death.")
+                return
+            else:
+                print("Well, your chipkey has been burned to death. You think you can do something?")
+
+        elif key == 0xffff:
+            if newkey == 0xffff:
+                print("Your chipkey is already nice and clean! Cheers!")
+                return
+
+            elif newkey == 0x0000:
+                print("Hey! Look at these pretty FF's! Do you ever want to burn them all to death?")
+
+            else:
+                print("Well, seems like you want to write the chipkey into a blank chip.. Yes?")
+
+        else:
+            if newkey == 0xffff:
+                print("Hmmm... You really think you can clear the chipkey?")
+
+            elif newkey == 0x0000:
+                print("Oh, so you want to burn the remaining bits to death? Do you?")
+
+            elif key == newkey:
+                print("The chip already has this key burned in!")
+                return
+
+            else:
+                if realkey == newkey:
+                    print("Well, this key could be burned into the chip. Do you want to proceed?")
+
+                else:
+                    print("Well, there is a key burned into this chip which won't let this key being burned correctly.")
+
+                    print("Here's what you get instead:")
+                    print_largeletters('%04X' % realkey)
+
+                    #print("\nHere are the bits of your current key:")
+                    #print(' '.join(['1' if key & (0x8000 >> b) else '0' for b in range(16)]))
+
+                    #print("\nAnd the bits of the key you're going to write:")
+                    #print(' '.join(['1' if newkey & (0x8000 >> b) else '0' for b in range(16)]))
+
+                    #print("\nBut since you can't unburn a bit, you're going to get this instead:")
+                    #print(' '.join(['1' if realkey & (0x8000 >> b) else '0' for b in range(16)]))
+
+                    print("\nDo you still want to proceed?")
+
+        answer = input('Say "yes i do" to proceed: ')
+        if answer.strip().lower() != 'yes i do':
+            print("You didn't answer correctly. Aborting")
+            return
+
+        try:
+            result = self.dev.write_chipkey(newkey)
+        except SCSIException:
+            print("Failed to burn chipkey!")
+            return
+
+        print("Result:")
+        print_largeletters('%04x' % result)
 
     def do_onlinedev(self, args):
         """Get the device type and info we're working with
@@ -136,33 +299,133 @@ class DasShell(cmd.Cmd):
         """
 
         try:
-            info = dev.online_device()
+            info = self.dev.online_device()
         except SCSIException:
             print("Failed to get the online device info")
             return
 
-        devtypes = {
-            0x00: 'None',
-            0x01: 'SDRAM',
-            0x02: 'SD card',
-            0x03: 'SPI NOR flash (on SPI0)',
-            0x04: 'SPI NAND flash (on SPI0)',
-            0x05: 'OTP',
-            0x10: 'SD card (2)',
-            0x11: 'SD card (3)',
-            0x12: 'SD card (4)',
-            0x13: 'Something 0x13',
-            0x14: 'Something 0x14',
-            0x15: 'Something 0x15',
-            0x16: 'SPI NOR flash (on SPI1)',
-            0x17: 'SPI NOR flash (on SPI1)',
-        }
-
-        print('Device type:\n  0x%02x [%s]' % (info['type'], devtypes.get(info['type'])))
+        print('Device type:\n  0x%02x [%s]' % (info['type'], dev_type_strs.get(info['type'])))
         print("\nDevice ID:")
-        largedigits(info['id'], 8)
+        print_largeletters('%08X' %  info['id'])
+
+    def do_execcmd(self, args):
+        """Execute an arbitrary loader command
+        execcmd <opcode> [<arg bytes>]
+        """
+
+        args = args.split(maxsplit=1)
+
+        if len(args) < 1:
+            print("Not enough arguments!")
+            self.do_help('execcmd')
+            return
+
+        try:
+            opcode = int(args[0], 0) & 0xffff
+        except ValueError:
+            print("<opcode> [%s] is not a number!" % args[0])
+            return
+
+        try:
+            data = bytes.fromhex(args[1])
+        except IndexError:
+            data = b''
+        except ValueError:
+            print('Wrong hex string "%s"!' % args[1])
+            return
+
+        try:
+            resp = self.dev.cmd_exec(opcode, data, ignore_wrong_resp=True)
+            print('Response: %04x / [%s]' % (resp[0], resp[1].hex(' ')))
+        except Exception as e:
+            print("Command execution failed: ", e)
 
     #------#------#------#------#------#------#------#------#------#------#
+
+    def flash_erase(self, address, length):
+        dlength = 0
+
+        while length > 0:
+            if length >= 0x10000 and (address & 0xffff) == 0:
+                block = 0x10000
+            else:
+                block = 0x1000
+
+            n = min(length, block - (address % block))
+
+            #print("\rErasing %x-%x..." % (address, address + length - 1), end='', flush=True)
+
+            t = time.time()
+            if block > 0x1000: self.dev.flash_erase_block(address)
+            else:              self.dev.flash_erase_sector(address)
+            t = time.time() - t
+
+            length -= n
+            dlength += n
+
+            ratio = dlength / (dlength + length)
+            print("\rErasing %08x [%s] %3d%%" % (address, makebar(ratio, 40), ratio * 100), end='')
+            print(" %.2f KB/s" % (block / 1000 / t), end='', flush=True)
+
+            address += n
+
+        print()
+
+    def flash_write_file(self, address, length, fil):
+        buffsz = self.dev.usb_buffer_size()
+
+        dlength = 0
+
+        while length > 0:
+            block = fil.read(buffsz)
+            if block == b'': break
+            n = len(block)
+
+            #print("\rWriting %x-%x..." % (address, address + length - 1), end='', flush=True)
+
+            t = time.time()
+            self.dev.flash_write(address, block)
+            t = time.time() - t
+
+            length -= n
+            dlength += n
+
+            ratio = dlength / (dlength + length)
+            print("\rWriting %08x [%s] %3d%%" % (address, makebar(ratio, 40), ratio * 100), end='')
+            print(" %.2f KB/s" % (len(block) / 1000 / t), end='', flush=True)
+
+            address += n
+
+        print()
+
+    def flash_read_file(self, address, fil):
+        buffsz = self.dev.usb_buffer_size()
+
+        dlength = 0
+
+        while length > 0:
+            n = min(buffsz, length)
+
+            #print("\rReading %x-%x..." % (address, address + length - 1), end='', flush=True)
+
+            t = time.time()
+            data = self.dev.flash_read(address, n)
+            t = time.time() - t
+
+            fil.write(data)
+
+            length -= n
+            dlength += n
+
+            ratio = dlength / (dlength + length)
+            print("\rReading %08x [%s] %3d%%" % (address, makebar(ratio, 40), ratio * 100), end='')
+            print(" %.2f KB/s" % (len(data) / 1000 / t), end='', flush=True)
+
+            address += n
+
+        print()
+
+    #-------------------------------------
 
     def do_read(self, args):
         """Read flash to file.
@@ -197,33 +460,8 @@ class DasShell(cmd.Cmd):
             return
 
         with fil:
-            maxlen = self.dev.flash_max_page_size()
-
             print()
-
-            dlength = 0
-
-            while length > 0:
-                n = min(maxlen, length)
-
-                #print("\rReading %x-%x..." % (address, address + length - 1), end='', flush=True)
-
-                t = time.time()
-                data = self.dev.flash_read(address, n)
-                t = time.time() - t
-
-                fil.write(data)
-
-                length -= n
-                dlength += n
-
-                ratio = dlength / (dlength + length)
-                print("\rReading %08x [%s] %3d%%" % (address, makebar(ratio, 40), ratio * 100), end='')
-                print(" %.2f KB/s" % (len(data) / 1000 / t), end='', flush=True)
-
-                address += n
-
-            print("")
+            self.flash_read_file(address, fil)
 
     #-------------------------------------
 
@@ -256,65 +494,10 @@ class DasShell(cmd.Cmd):
             length = fil.tell()
             fil.seek(0)
 
-            maxlen = self.dev.flash_max_page_size()
-
             print()
 
-            xaddress = address
-            xlength = length
-            dlength = 0
-
-            while length > 0:
-                if length >= 0x10000 and (address & 0xffff) == 0:
-                    block = 0x10000
-                else:
-                    block = 0x1000
-
-                n = min(length, block - (address % block))
-
-                #print("\rErasing %x-%x..." % (address, address + length - 1), end='', flush=True)
-
-                t = time.time()
-                if block > 0x1000: self.dev.flash_erase_block(address)
-                else:              self.dev.flash_erase_sector(address)
-                t = time.time() - t
-
-                length -= n
-                dlength += n
-
-                ratio = dlength / (dlength + length)
-                print("\rErasing %08x [%s] %3d%%" % (address, makebar(ratio, 40), ratio * 100), end='')
-                print(" %.2f KB/s" % (block / 1000 / t), end='', flush=True)
-
-                address += n
-
-            print()
-
-            address = xaddress
-            length = xlength
-            dlength = 0
-
-            while length > 0:
-                block = fil.read(maxlen)
-                if block == b'': break
-                n = len(block)
-
-                #print("\rWriting %x-%x..." % (address, address + length - 1), end='', flush=True)
-
-                t = time.time()
-                self.dev.flash_write(address, block)
-                t = time.time() - t
-
-                length -= n
-                dlength += n
-
-                ratio = dlength / (dlength + length)
-                print("\rWriting %08x [%s] %3d%%" % (address, makebar(ratio, 40), ratio * 100), end='')
-                print(" %.2f KB/s" % (len(block) / 1000 / t), end='', flush=True)
-
-                address += n
-
-            print("")
+            self.flash_erase(address, length)
+            self.flash_write_file(address, length, fil)
 
     #-------------------------------------
 
@@ -356,33 +539,7 @@ class DasShell(cmd.Cmd):
 
         print()
 
-        dlength = 0
-
-        while length > 0:
-            if length >= 0x10000 and (address & 0xffff) == 0:
-                block = 0x10000
-            else:
-                block = 0x1000
-
-            n = min(length, block - (address % block))
-
-            #print("\rErasing %x-%x..." % (address, address + length - 1), end='', flush=True)
-
-            t = time.time()
-            if block > 0x1000: self.dev.flash_erase_block(address)
-            else:              self.dev.flash_erase_sector(address)
-            t = time.time() - t
-
-            length -= n
-            dlength += n
-
-            ratio = dlength / (dlength + length)
-            print("\rErasing %08x [%s] %3d%%" % (address, makebar(ratio, 40), ratio * 100), end='')
-            print(" %.2f KB/s" % (block / 1000 / t), end='', flush=True)
-
-            address += n
-
-        print("")
+        self.flash_erase(address, length)
 
     #-------------------------------------
 
@@ -414,10 +571,10 @@ class DasShell(cmd.Cmd):
             print("<length> [%s] is not a number!" % args[1])
             return
 
-        maxlen = self.dev.flash_max_page_size()
+        buffsz = self.dev.usb_buffer_size()
 
         while length > 0:
-            n = min(length, maxlen)
+            n = min(length, buffsz)
 
             hexdump(self.dev.flash_read(address, n), address=address)
 
@@ -427,10 +584,10 @@ class DasShell(cmd.Cmd):
     #------#------#------#------#------#------#------#------#------#------#
 
     def do_reset(self, args):
-        """Reset the chip.
-        reset [<code>]
+        """Reset the chip. (or Run App)
+        reset [<arg>]
 
-        If <code> is not specified, then it will default to 1.
+        If <arg> is not specified, then it will default to 1.
         """
 
         args = args.split(maxsplit=2)
@@ -444,162 +601,10 @@ class DasShell(cmd.Cmd):
             return
 
         try:
-            self.dev.reset(code)
-        except SCSIException:
-            print("dies...")
+            self.dev.run_app(code)
+        except Exception as e:
+            print("<!> Exiting..", e)
             return True
-
-    #------#------#------#------#------#------#------#------#------#------#
-
-    def do_vmdump(self, args):
-        """Dumps the VM.
-        vmdump <address>
-
-        <address> is the address of the VM in the flash,
-            can be identified as the 4k block that's starting with
-            "55 AA AA 55", "AE A5 5A EA" or "51 5A A5 15".
-        """
-
-        """
-        v1:
-            AE A5 5A EA <= Sign         [DV12]
-            51 5A A5 15 <= Another Sign [DV16]
-
-            CcccccccLlllllllNnnnnnnn10101101
-
-            Cccccccc     = CRC16 of data (lower 8 bits)
-            Llllllll     = Data length
-            Nnnnnnnn     = ID
-
-        v2:
-            55 AA AA 55 <= Valid
-            88 44 11 22 <= Defrag started
-            AA 55 11 22 <= Defrag almost completed
-
-            CcccccccNnnnnnnnLlllllllllll1101
-
-            Cccccccc     = CRC16 of data (lower 8 bits)
-            Nnnnnnnn     = ID
-            Llllllllllll = Data length
-
-        v3:
-            55 AA AA 55 <= Valid
-            88 44 11 22 <= Defrag started
-            AA 55 11 22 <= Defrag almost completed
-
-            LlllllllllllNnnnnnnnnnnnCccccccc
-
-            Llllllllllll = Data length
-            Nnnnnnnnnnnn = ID
-            Cccccccc     = CRC16 of data (lower 8 bits)
-        """
-
-        args = args.split(maxsplit=2)
-
-        if len(args) < 1:
-            print("Not enough arguments!")
-            self.do_help('vmdump')
-            return
-
-        try:
-            address = int(args[0], 0)
-        except ValueError:
-            print("<address> [%s] is not a number!" % args[0])
-            return
-
-        #--------------------------------------------
-
-        if self.dev.flash_read(address, 4) not in (b'\x55\xaa\xaa\x55', b'\xae\xa5\x5a\xea', b'\x51\x5a\xa5\x15'):
-            print("There isn't any valid VM at %x" % address)
-            return
-
-        caddr = address + 4
-
-
-        def dec_v1(addr):
-            hdr = int.from_bytes(self.dev.flash_read(addr, 4), 'little')
-
-            if hdr == 0xffffffff:
-                return None
-
-            if (hdr & 0xff) != 0xAD:
-                return None
-
-            ecrc = (hdr >> 24) & 0xff
-            elen = (hdr >> 16) & 0xff
-            eid  = (hdr >> 8)  & 0xff
-
-            edat = self.dev.flash_read(addr + 4, elen)
-
-            if (jl_crc16(edat) & 0xff) != ecrc:
-                return None
-
-            return {'len': elen + 4, 'id': eid, 'data': edat}
-
-        def dec_v2(addr):
-            hdr = int.from_bytes(self.dev.flash_read(addr, 4), 'little')
-
-            if hdr == 0xffffffff:
-                return None
-
-            if (hdr & 0xf) != 0xD:
-                return None
-
-            ecrc = (hdr >> 24) & 0xff
-            eid  = (hdr >> 16) & 0xff
-            elen = (hdr >> 4)  & 0xfff
-
-            edat = self.dev.flash_read(addr + 4, elen)
-
-            if (jl_crc16(edat) & 0xff) != ecrc:
-                return None
-
-            return {'len': elen + 4, 'id': eid, 'data': edat}
-
-        def dec_v3(addr):
-            hdr = int.from_bytes(self.dev.flash_read(addr, 4), 'little')
-
-            if hdr == 0xffffffff:
-                return None
-
-            ecrc = (hdr >> 0)  & 0xff
-            eid  = (hdr >> 8)  & 0xfff
-            elen = (hdr >> 20) & 0xfff
-
-            edat = self.dev.flash_read(addr + 4, elen)
-
-            if (jl_crc16(edat) & 0xff) != ecrc:
-                return None
-
-            return {'len': elen + 4, 'id': eid, 'data': edat}
-
-        fmt = -1
-
-        while True:
-            if fmt < 0:
-                if dec_v1(caddr) is not None:
-                    fmt = 0
-                    continue
-
-                if dec_v2(caddr) is not None:
-                    fmt = 1
-                    continue
-
-                if dec_v3(caddr) is not None:
-                    fmt = 2
-                    continue
-
-                break
-
-            else:
-                ent = ([dec_v1, dec_v2, dec_v3][fmt])(caddr)
-                if ent is None:
-                    fmt = -1
-                    continue
-
-            print('[%4d]:' % ent['id'], ent['data'].hex(':'))
-
-            caddr += ent['len']
 
 ###### ###### ###### ###### ###### ###### ###### ###### ###### ###### ######
 
@@ -622,88 +627,163 @@ with JL_UBOOT(device) as dev:
         exit(2)
 
     family = JL_chips[chipname]
-    print('Chip: %s (%s)' % (chipname, ', '.join(family['name'])))
+    print('Chip: %s (%s)' % (chipname.upper(), ', '.join(family['name'])))
+
+    #print_largeletters(chipname)
 
     runtheloader = False
 
     if args.force_loader:
-        print("Loader will be explicitly loaded as specified on the command line")
+        print("Will run the loader regardless of whether it is needed or not.")
         runtheloader = True
 
     elif product == 'UBOOT1.00':
-        print("UBOOT1.00 device, loader will be loaded")
+        print("This is the UBOOT1.00 device, so we'll run the loader.")
         runtheloader = True
 
     if runtheloader:
-        if args.loader is not None:
-            print("Using custom loader specified on the command line")
-            addr = int(args.loader[0], 0)
-            path = args.loader[1]
+        gotcustom = False
 
-            if not os.path.exists(path):
-                print("File '%s' does not exist..." % path)
-                exit(3)
+        #
+        # Is there any custom loader spec passed?
+        #
+        if args.custom_loaders is not None:
+            try:
+                loaderspec = yaml.load(open(args.custom_loaders), Loader=yaml.SafeLoader)
+                loaderroot = pathlib.Path(args.custom_loaders).parent
 
-            loader = {"file": path, "address": addr}
+                gotcustom = True
+            except Exception as e:
+                print("Something went wrong while loading the custom loader spec file:", e)
 
-        else:
-            print("Using builtin loader collection")
+        #
+        # We did load the custom loader spec, so check if it has that chip.
+        #
+        if gotcustom:
+            if chipname not in loaderspec:
+                print("There is no USB loader for %s in the provided loader spec. Proceeding with builtin" % chipname)
+                gotcustom = False
 
-            if chipname not in JL_usb_loaders:
-                print("No USB loader is available.")
-                exit(3)
+        #
+        # Use the builtin loader spec if we can't use a custom loader spec.
+        #
+        if not gotcustom:
+            loaderspec = JL_usb_loaders
+            loaderroot = scriptroot
 
-            loader = JL_usb_loaders[chipname]
+        #
+        # Is there a loader for our chip?
+        #
+        if chipname not in loaderspec:
+            print("Sorry, but there is no USB loader available for %s." % chipname)
+            exit(3)
 
-        ###########
+        loader = loaderspec[chipname]
 
-        with open(scriptroot/loader['file'], 'rb') as f:
+        with open(loaderroot/loader['file'], 'rb') as f:
+            blocksz = loader.get('blocksize', 512)
+
+            #
+            # Write
+            #
             addr = loader['address']
-
             while True:
-                block = f.read(loader.get('blocksize', 512))
+                block = f.read(blocksz)
                 if block == b'': break
 
                 dev.mem_write(addr, block)
 
                 addr += len(block)
 
-        if args.loader_arg is not None:
-            loader['argument'] = int(args.loader_arg, 0)
+            f.seek(0)
+
+            #
+            # Verify
+            #
+            addr = loader['address']
+            while True:
+                block = f.read(blocksz)
+                if block == b'': break
+
+                rblock = dev.mem_read(addr, len(block))
+                if block != rblock:
+                    print('Mismatch at %08x!' % addr)
+                    break
+
+                addr += len(block)
 
         if 'argument' not in loader:
-            loader['argument'] = 0
+            print('This loader does not seem to have a default argument.')
+            loader['argument'] = (0<<12) | (4<<4) | (1<<0) # spi mode=0, div=4, mem=1 (spi nor)
 
-        print("Running loader at %(address)08x, with argument %(argument)04x..." % loader)
+        if args.loader_arg is not None:
+            print('Overriding the default loader argument (%04x) with %04x' % (loader['argument'], args.loader_arg))
+            loader['argument'] = args.loader_arg
 
-        dev.mem_jump(loader['address'], loader['argument'])
+        if 'entry' not in loader:
+            loader['entry'] = loader['address']
 
-        print("Loader uploaded successfully")
+        print("Running loader (loaded to 0x%(address)04x) on 0x%(entry)04x, with argument 0x%(argument)04x..." % loader)
 
-    #-------------------------
+        try:
+            dev.mem_jump(loader['entry'], loader['argument'])
+            print("Loader runs successfully.")
+        except SCSIException:
+            print("Failed to run loader.")
 
-    ds = DasShell(dev)
+    #
+    # Let's try to gather some info beforehand
+    #
 
-    print("----------------:------------------------")
-
-    try:
-        print("Online device   : id=%(id)x type=%(type)d" % dev.online_device())
-    except SCSIException:
-        print("Failed to get online device info.. TODO")
-
-    try:
-        print("Chip key        : %04x" % dev.chip_key())
-    except SCSIException:
-        print("Failed to get chip key.. TODO")
-
-    try:
-        print("Flash page size : %d" % dev.flash_max_page_size())
-    except SCSIException:
-        print("Failed to get flash page size.. TODO")
+    loader = JL_Loader(dev)
 
     print("----------------:------------------------")
 
-    ds.onecmd('onlinedev')
+    try:
+        odev = loader.online_device()
+        print("Online device   : id=0x%06x type=%d (%s)"
+                    % (odev['id'], odev['type'], dev_type_strs.get(odev['type'], 'unknown')))
+    except SCSIException:
+        pass #print("(!) Failed to get online device info")
+
+    try:
+        print("Chip key        : 0x%04x" % loader.chip_key())
+    except SCSIException:
+        pass #print("(!) Failed to get chip key")
+
+    try:
+        print("USB buffer size : %d" % loader.usb_buffer_size())
+    except SCSIException:
+        pass #print("(!) Failed to get USB buffer size")
+
+    try:
+        print("Status          : 0x%02x" % loader.read_status())
+    except SCSIException:
+        pass #print("(!) Failed to read status")
+
+    try:
+        print("Device ID       : 0x%06x" % loader.read_id())
+    except SCSIException:
+        pass #print("(!) Failed to read device ID")
+
+    #try:
+    #    print("Loader version  : %s" % loader.version())
+    #except SCSIException:
+    #    pass #print("(!) Failed to get loader version")
+
+    #try:
+    #    print("MaskROM ID      : 0x%08x" % loader.maskrom_id())
+    #except SCSIException:
+    #    pass #print("(!) Failed to get MaskROM ID")
+
+    print("----------------:------------------------")
+
+    #
+    # Let's enter the shell!
+    #
+    ds = DasShell(loader)
+
+    #ds.onecmd('onlinedev')
     ds.onecmd('chipkey')
 
     ds.cmdloop()
