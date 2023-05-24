@@ -231,10 +231,10 @@ class DasShell(cmd.Cmd):
             if newkey == 0xffff:
                 print("Nice try. Do you think you can ever do that?")
             elif newkey == 0x0000:
-                print("You chipkey is already burned to death.")
+                print("You chipkey is already burnt to death.")
                 return
             else:
-                print("Well, your chipkey has been burned to death. You think you can do something?")
+                print("Well, your chipkey has been burnt to death. You think you can do something?")
 
         elif key == 0xffff:
             if newkey == 0xffff:
@@ -255,15 +255,15 @@ class DasShell(cmd.Cmd):
                 print("Oh, so you want to burn the remaining bits to death? Do you?")
 
             elif key == newkey:
-                print("The chip already has this key burned in!")
+                print("The chip already has this key burnt in!")
                 return
 
             else:
                 if realkey == newkey:
-                    print("Well, this key could be burned into the chip. Do you want to proceed?")
+                    print("Well, this key could be burnt into the chip. Do you want to proceed?")
 
                 else:
-                    print("Well, there is a key burned into this chip which won't let this key being burned correctly.")
+                    print("Well, there is a key burnt into this chip which won't let this key being burnt correctly.")
 
                     print("Here's what you get instead:")
                     print_largeletters('%04X' % realkey)
