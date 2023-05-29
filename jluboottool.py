@@ -3,8 +3,8 @@ from jl_uboot import JL_UBOOT, JL_Loader, SCSIException
 import argparse, cmd, time
 import pathlib, yaml
 
-ap = argparse.ArgumentParser(description='JieLi UBOOT tool',
-                             epilog='TaiyouKouhaTsuden System ver.125 by TsutsuMin')
+ap = argparse.ArgumentParser(description='JieLi UBOOT tool - the swiss army knife for JieLi technology',
+                             epilog='// nemol-main.mod, modarchiveid:93339')
 
 def anyint(s):
     return int(s, 0)
@@ -14,7 +14,11 @@ ap.add_argument('--device',
                      'if not specified, then it tries to search for devices.')
 
 ap.add_argument('--loader-arg', type=anyint, metavar='ARG',
-                help="Loader's numerical argument (overrides the default)")
+                help="Loader's argument (overrides the default).\n" +
+                     "Hint: usually, the argument is parsed by the loader as follows:\n" +
+                     "  bit0-3: Target memory (1 = SPI flash, 7 = OTP),\n" +
+                     "  bit4-11: Clock divider (0 = default, >0 = 1/n) - base is usually 48 MHz,\n" +
+                     "  bit12-13: SPI mode (0 = half-duplex (2-wire) SPI, 1 = duplex (3-wire) SPI, 2 = DSPI, 3 = QSPI)")
 
 ap.add_argument('--custom-loaders', metavar='FILE',
                 help='Path to the custom loader spec YAML file. ' +
@@ -229,12 +233,12 @@ class DasShell(cmd.Cmd):
         #
         if key == 0x0000:
             if newkey == 0xffff:
-                print("Nice try. Do you think you can ever do that?")
+                print("I think there's no way to escape this. Do you wanna try?")
             elif newkey == 0x0000:
-                print("You chipkey is already burnt to death.")
+                print("Well, everything is burnt down already. So there's nothing to do.")
                 return
             else:
-                print("Well, your chipkey has been burnt to death. You think you can do something?")
+                print("Your chipkey seems to be all burnt down. Do you think you can do something with that?")
 
         elif key == 0xffff:
             if newkey == 0xffff:
@@ -242,10 +246,10 @@ class DasShell(cmd.Cmd):
                 return
 
             elif newkey == 0x0000:
-                print("Hey! Look at these pretty FF's! Do you ever want to burn them all to death?")
+                print("Well, you want to burn all bits down?")
 
             else:
-                print("Well, seems like you want to write the chipkey into a blank chip.. Yes?")
+                print("You are about to burn the chipkey into a chip. Do you want to proceed?")
 
         else:
             if newkey == 0xffff:
@@ -255,27 +259,18 @@ class DasShell(cmd.Cmd):
                 print("Oh, so you want to burn the remaining bits to death? Do you?")
 
             elif key == newkey:
-                print("The chip already has this key burnt in!")
+                print("This chipkey is already burnt. So there's nothing to do.")
                 return
 
             else:
                 if realkey == newkey:
-                    print("Well, this key could be burnt into the chip. Do you want to proceed?")
+                    print("This key can be successfully written. Do you want to proceed?")
 
                 else:
-                    print("Well, there is a key burnt into this chip which won't let this key being burnt correctly.")
+                    print("Well, this key won't be written as you think it will.")
 
-                    print("Here's what you get instead:")
+                    print("So that's what you get instead:")
                     print_largeletters('%04X' % realkey)
-
-                    #print("\nHere are the bits of your current key:")
-                    #print(' '.join(['1' if key & (0x8000 >> b) else '0' for b in range(16)]))
-
-                    #print("\nAnd the bits of the key you're going to write:")
-                    #print(' '.join(['1' if newkey & (0x8000 >> b) else '0' for b in range(16)]))
-
-                    #print("\nBut since you can't unburn a bit, you're going to get this instead:")
-                    #print(' '.join(['1' if realkey & (0x8000 >> b) else '0' for b in range(16)]))
 
                     print("\nDo you still want to proceed?")
 
@@ -290,8 +285,7 @@ class DasShell(cmd.Cmd):
             print("Failed to burn chipkey!")
             return
 
-        print("Result:")
-        print_largeletters('%04x' % result)
+        print("Result: 0x%08x" % result)
 
     def do_onlinedev(self, args):
         """Get the device type and info we're working with
@@ -398,7 +392,7 @@ class DasShell(cmd.Cmd):
 
         print()
 
-    def flash_read_file(self, address, fil):
+    def flash_read_file(self, address, length, fil):
         buffsz = self.dev.usb_buffer_size()
 
         dlength = 0
@@ -461,7 +455,7 @@ class DasShell(cmd.Cmd):
 
         with fil:
             print()
-            self.flash_read_file(address, fil)
+            self.flash_read_file(address, length, fil)
 
     #-------------------------------------
 
@@ -648,6 +642,8 @@ with JL_UBOOT(device) as dev:
         # Is there any custom loader spec passed?
         #
         if args.custom_loaders is not None:
+            print("Trying to use custom loader specs from [%s]..." % args.custom_loaders)
+
             try:
                 loaderspec = yaml.load(open(args.custom_loaders), Loader=yaml.SafeLoader)
                 loaderroot = pathlib.Path(args.custom_loaders).parent
@@ -661,13 +657,14 @@ with JL_UBOOT(device) as dev:
         #
         if gotcustom:
             if chipname not in loaderspec:
-                print("There is no USB loader for %s in the provided loader spec. Proceeding with builtin" % chipname)
+                print("There is no USB loader for %s in the provided loader spec" % chipname)
                 gotcustom = False
 
         #
         # Use the builtin loader spec if we can't use a custom loader spec.
         #
         if not gotcustom:
+            print("Using the builtin loader specs")
             loaderspec = JL_usb_loaders
             loaderroot = scriptroot
 
@@ -731,52 +728,56 @@ with JL_UBOOT(device) as dev:
         except SCSIException:
             print("Failed to run loader.")
 
+    print()
+
     #
     # Let's try to gather some info beforehand
     #
 
     loader = JL_Loader(dev)
 
-    print("----------------:------------------------")
+    print(".-----------------.-----------------------------------------------.")
+    print("| Quick info      : %s (%s)" % (chipname.upper(), '/'.join(family['name'])))
+    print("|-----------------:-----------------------------------------------.")
 
     try:
         odev = loader.online_device()
-        print("Online device   : id=0x%06x type=%d (%s)"
+        print("| Online device   : id=<%06x> type=%d (%s)"
                     % (odev['id'], odev['type'], dev_type_strs.get(odev['type'], 'unknown')))
     except SCSIException:
         pass #print("(!) Failed to get online device info")
 
     try:
-        print("Chip key        : 0x%04x" % loader.chip_key())
+        print("| Chip key        : <%04X>" % loader.chip_key())
     except SCSIException:
         pass #print("(!) Failed to get chip key")
 
     try:
-        print("USB buffer size : %d" % loader.usb_buffer_size())
+        print("| USB buffer size : %d bytes" % loader.usb_buffer_size())
     except SCSIException:
         pass #print("(!) Failed to get USB buffer size")
 
-    try:
-        print("Status          : 0x%02x" % loader.read_status())
-    except SCSIException:
-        pass #print("(!) Failed to read status")
-
-    try:
-        print("Device ID       : 0x%06x" % loader.read_id())
-    except SCSIException:
-        pass #print("(!) Failed to read device ID")
+    #try:
+    #    print("Status          : <%02x>" % loader.read_status())
+    #except SCSIException:
+    #    pass #print("(!) Failed to read status")
 
     #try:
-    #    print("Loader version  : %s" % loader.version())
+    #    print("| Device ID       : <%06x>" % loader.read_id())
+    #except SCSIException:
+    #    pass #print("(!) Failed to read device ID")
+
+    #try:
+    #    print("| Loader version  : %s" % loader.version())
     #except SCSIException:
     #    pass #print("(!) Failed to get loader version")
 
     #try:
-    #    print("MaskROM ID      : 0x%08x" % loader.maskrom_id())
+    #    print("| MaskROM ID      : <%08x>" % loader.maskrom_id())
     #except SCSIException:
     #    pass #print("(!) Failed to get MaskROM ID")
 
-    print("----------------:------------------------")
+    print("`-----------------'-----------------------------------------------'")
 
     #
     # Let's enter the shell!
@@ -784,6 +785,6 @@ with JL_UBOOT(device) as dev:
     ds = DasShell(loader)
 
     #ds.onecmd('onlinedev')
-    ds.onecmd('chipkey')
+    #ds.onecmd('chipkey')
 
     ds.cmdloop()
