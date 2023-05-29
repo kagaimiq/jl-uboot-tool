@@ -44,9 +44,10 @@ SG_INFO_INDIRECT_IO    = 0x0
 SG_INFO_DIRECT_IO      = 0x2
 SG_INFO_MIXED_IO       = 0x4
 
+
 class SCSIDev(SCSIDevBase):
     """
-    SCSI I/O device implementation for Linux's SG_IO ioctl
+    SCSI Generic I/O device implementation for Linux's SG_IO ioctl
     """
 
     def open(self, path):
@@ -66,7 +67,7 @@ class SCSIDev(SCSIDevBase):
         sgio = sg_io_hdr()
         sgio.interface_id = SG_INTERFACE_ID_ORIG
 
-        sgio.timeout = 1000 # TODO ; in milliseconds
+        sgio.timeout = 5000 # TODO ; in milliseconds
 
         sgio.mx_sb_len = max_sense_len
         sensebuff = ctypes.create_string_buffer(sgio.mx_sb_len)
@@ -98,10 +99,11 @@ class SCSIDev(SCSIDevBase):
             raise OSError(res, 'SG_IO ioctl failed')
 
         if sgio.info & SG_INFO_OK_MASK != SG_INFO_OK:
-            msg = 'Transfer failed... info:%x host:%x driver:%x' % (sgio.info, sgio.host_status, sgio.driver_status)
+            msg = 'Transfer failed: info:%02x, host status:%02x, driver status:%02x' \
+                    % (sgio.info, sgio.host_status, sgio.driver_status)
 
             if sgio.sb_len_wr > 0:
-                msg += '\nSense looks like this:\n' + memoryview(sensebuff.raw[:sgio.sb_len_wr]).hex('.')
+                msg += '\nSense looks like this:\n' + sensebuff.raw[:sgio.sb_len_wr].hex('.')
 
             raise SCSIException(msg)
 

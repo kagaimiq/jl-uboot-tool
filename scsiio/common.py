@@ -1,6 +1,6 @@
 class SCSIDevBase:
     """
-    SCSI I/O device base class
+    SCSI Generic I/O device base class
     """
 
     def __init__(self, path=None):

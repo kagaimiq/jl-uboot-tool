@@ -59,7 +59,7 @@ DeviceIoControl.restype  = BOOL
 
 class SCSIDev(SCSIDevBase):
     """
-    SCSI I/O device implementation for Win32's SCSI_PASS_THROUGH_DIRECT ioctl
+    SCSI Generic I/O device implementation for Win32's SCSI_PASS_THROUGH_DIRECT ioctl
     """
 
     def open(self, path):
@@ -68,7 +68,7 @@ class SCSIDev(SCSIDevBase):
                              OPEN_EXISTING, 0, 0)
 
         if self.fhandle == INVALID_HANDLE_VALUE:
-            raise Exception('Could not open SCSI device: %s' % ctypes.WinError())
+            raise ctypes.WinError()
 
         self.is_open = True
 
@@ -88,7 +88,7 @@ class SCSIDev(SCSIDevBase):
         sptd.target_id = 1
         sptd.lun       = 0
 
-        sptd.timeout = 10 # TODO ; in seconds
+        sptd.timeout = 5 # TODO ; in seconds
 
         #sptd.sense_off = 0
         #sptd.sense_len = max_sense_len
@@ -130,7 +130,7 @@ class SCSIDev(SCSIDevBase):
                               ctypes.byref(xlen), 0)
 
         if not res:
-            raise SCSIException('Transfer failed... %s' % ctypes.WinError())
+            raise SCSIException('Transfer failed: %s' % ctypes.WinError())
 
         if data_in:
             inlen = sptd.data_len
