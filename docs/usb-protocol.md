@@ -3,7 +3,7 @@
 A chip under USB download (UBOOT) mode shows up as an Mass Storage device with SCSI command interface, which uses some custom SCSI commands
 to interact with the chip.
 
-# General info
+## General info
 
 The command block (CB) contains the opcode (e.g. 0xFB, 0xFC, 0xFD), the sub-opcode and zero or more argument bytes.
 
@@ -17,44 +17,30 @@ Data in and Data out is rather self-explaining. Here's the actual data being tra
 The response packet can be up to 16 bytes long and the first two bytes contain the first two bytes of the CB (that is, opcode and sub-opcode, respectively),
 however sometimes they doesn't quite match (e.g. in br17loader's "Get loader version" command.
 
-# Commands & stuff
+# UBOOT1.00
+
+The command set that is understood by the UBOOT1.00 mode in the chip's ROM.
+Basically it only allows to read and write memory, as well as running the code in memory,
+which also can set the SCSI command hook which allows to do more.
+
+So to do anything else a loader binary needs to be loaded first.
 
 ## Opcodes
 
-- 0xF5 = ??
 - 0xFB = "Write flash"
-- 0xFC = "Other"
 - 0xFD = "Read flash"
 
 ### 0xFB sub-opcodes
 
-- 0x00 = [Erase flash block (64k)](#erase-flash-block-64k)
-- 0x01 = [Erase flash sector (4k)](#erase-flash-sector-4k)
-- 0x02 = [Erase flash chip](#erase-flash-chip)
-- 0x04 = [Write flash](#write-flash)
 - 0x06 = [Write memory](#write-memory)
 - 0x08 = [Jump to memory](#jump-to-memory)
 - 0x31 = [Write memory (encrypted)](#write-memory-encrypted)
 
-### 0xFC sub-opcodes
-
-- 0x09 = [Get chipkey](#get-chipkey)
-- 0x0A = [Get online device](#get-online-device)
-- 0x0C = [Reset](#reset)
-- 0x0E = Seemingly "Get flash CRC16" of the DV15/etc loader
-- 0x13 = [Get flash CRC16](#get-flash-crc16)
-- 0x14 = [Get flash max page size](#get-flash-max-page-size)
-
 ### 0xFD sub-opcodes
 
-- 0x05 = [Read flash](#read-flash)
 - 0x07 = [Read memory](#read-memory)
 
-## UBOOT1.00 commands
-
-The base command set that is provided by the UBOOT1.00 variant that lives in the MaskROM.
-Basically the only thing it can do is access the memory and run the code,
-and so to do more things you need to load a "loader" binary first.
+## Commands
 
 ### Write memory
 
@@ -140,32 +126,8 @@ however it takes data encrypted with something different than what the regular w
 
 Look at the *dv15loader.enc* for an example of data transferred via this command (data is transmitted in 512 byte blocks)
 
-## Loader/UBOOT2.00 commands
+# Loader/UBOOT2.00 commands
 
-This is common overview of the commands, for more specfic details for each loader, check out:
-- [AC4100 loader](ac4100loader.md) - quite different protocol actually
-- [BR17 loader](br17loader.md)
-
-### Get online device
-
-- Command: `FC 0A -- -- -- --`
-- Data out: `FC 0A AA -- bb:bb:bb:BB -- -- -- -- -- -- -- --`
-  * AA = Device type:
-    * 0x00 - no device
-    * 0x01 - SDRAM
-    * 0x02 - SD card
-    * 0x03 - SPI NOR flash (on SPI0)
-    * 0x04 - SPI NAND flash (on SPI0)
-    * 0x05 - OTP
-    * 0x10 = SD card
-    * 0x11 = SD card
-    * 0x12 = SD card
-    * 0x13 = ?
-    * 0x14 = ?
-    * 0x15 = ?
-    * 0x16 = SPI NOR flash (on SPI1)
-    * 0x17 = SPI NAND flash (on SPI1)
-  * bb:bb:bb:BB = Device ID
-    * for SPI (NOR) flash it's the JEDEC ID returned by the 0x9F command
-    * for OTP, it is 0x4f545010 "OTP\x10"
-    * for SD card, it is 0x73647466 "sdtf" (maybe - assumed)
+There are few different variants of these, look:
+- [AC4100 loader](ac4100loader.md) - allegedly the v1 protocol
+- [USB loader v2](usb-loader-v2.md) - protocol used by most chips (which speak the UBOOT1.00 protocol described above)
