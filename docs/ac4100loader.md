@@ -1,6 +1,6 @@
-# AC4100 loader
+# ac4100loader
 
-This describes commands and their behavior specific to the AC4100 loader.
+This describes commands and their behavior specific to ac4100loader
 
 ## Opcodes
 

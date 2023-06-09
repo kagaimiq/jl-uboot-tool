@@ -1,73 +1,77 @@
-# How to enter UBOOT mode
+# How to enter USB download (UBOOT) mode
 
-## Via dongle
+## Via dongle (USB key)
 
-This is the primary way of entering this mode, which is done via a "USB Updater" / "Forced upgrade tool" dongle.
+This is the primary way of entering the USB download mode, which seems to be called "USB_KEY".
 
-When booting up, the MaskROM checks for a special signal on the USB lines, which 'skips' the boot process ("bootskip") and goes straight into the UBOOT mode.
+When the chips boots up off its ROM, it checks for a special key signal on the USB lines, and if it found one, it skips the boot procss
+and goes straight to the USB download mode.
 
-This special signal is the bits 0x16EF (0001011011101111) which is applied to the USB lines like so:
+The key itself is a 16-bit value 0x16EF (0001 0110 1110 1111), which is sent over the USB lines like so:
+
 ```
 D- | ______--__----__------__-------- ...
 D+ | _-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_- ...
 ```
-Here, the D- is the data line an D+ is the clock line. Clock frequency used by the dongle is around 50 kHz.
 
-You send this sequence repeatedly until the chip acknowledges this by pulling the D+/D- lines to ground.
+Here, the D- line is the data and D+ line is the clock.
+The data is sent MSB-first and sampled by the clock's rising edge.
 
-Things that's worth noting:
+This key is sent continuously until the dongle acknowledges it by pulling both D+ and D- to ground for at least 2ms:
 
-Chips like BR17/BR21 (and possibly any older chips as well) do not care what bit it received first when it finally started to sample the USB lines.
-Thus, you can just send out the signals, then power up the chip at any moment, and it will eventually synchronize and enter the UBOOT mode,
-which will **time out in ~4 seconds** so be sure to connect the USB really quick!
 ```
-5v | ______________ ... ________----------------------------------------------------------------
-D- | ______--__---- ... __----__---- ... ______--__----__------__--------______--____________---
-D+ | _-_-_-_-_-_-_- ... _-_-_-_-_-_- ... _-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-__________-_-
-     |                          |        \............................../          \......../
-  starting to send    the power is       valid sequence                         chip acknowledges
-  out signals         applied to the     starts there                           this
-                      chip
+D- | ______--__----__------__--------______________________________________--
+D+ | _-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_________________________________-_-_-_-
+     \______________________________/\_______________________________/
+           valid 0x16EF key                  acknowledge
+                              (not to scale)
 ```
 
-But chips like BR23/BR25 (and anything newer) *do* care about that, which means that you should apply power to the chip *first*, then
-wait a little bit (like 20 ms or so) and *then* only send out the signals.
-```
-5v | ___________--------------------------------------------------------------------
-D- | __________________________________--__----__------__--------________________---
-D+ | _____________________________-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-__________-_-
-     |          | \............./\............................../      \......../
-   don't      apply    wait for          start to send out           chip acknowledges
-   send     power to   a little bit        the sequence              this
- anything   the chip   for chip to
-    yet                be ready
-```
+And then after detecting the acknowledge you stop sending the key and proceed to switch the USB to the host side.
 
-**Or not ??** _I just checked on BR25, and it seems like this isn't ever the case, as it works even without the special power sequence,
-although the USB should be connected almost immediatly, as otherwise the USB device doesn't recognize and the chip seems to lock up
-and it gets reset by the watchdog...
-Also the MaskROM code hints that there's nothing special about that - the bits are received on the timer ISR (which captures the rising edges on D+)
-and if the received bits matched 0x16EF then it pulls down both lines for at least 2ms (acknowledge and also inhibits the reception).._
+However, sometimes there are some considerations that does not line up with the ROM operation from the logical point of view,
+which probably depend more on the implementation of the dongle rather than the chip itself, which does not let to tell right away
+how to send the key so that the entry into USB download mode would be guaranteed to work on many chips without any trouble.
 
-Also a thing worth noting is that BR23 seem to have some troubles with this method (although I didn't check that since i don't have any BR23 chip yet),
-and so to enter the UBOOT mode on these chips a completely different way is used, which seem to use some hardware protocols like ISD.
+For example, chips like BR23 or BR25 really doesn't like to have USB connected too late, if you'll do so then it won't really
+respond to any USB control packets and the chip will just reboot likely by being reset by the watchdog because of a crash or something like that.
 
-## Having trouble on booting
+On other hand, chips like BR17 or BR21 does not have these strict requirements on the USB connection - you can connect the USB to the chip
+whenever you want, until the chip gets reset by the watchdog after ~4 seconds likely because of the USB detection code having a busy loop
+without feeding the watchdog. But anyway, here the situation is not so strict as in BR23/BR25 case.
 
-If the chip can't boot into the main firmware (or more like the uboot.boot, which then boots into the rest) due to some issues with the firmware header,
-which is caused by erased (empty) flash, corrupted firmware, disconnected flash, etc; then it will enter the UBOOT mode.
+At least I can suggest connecting the USB to the chip as quickly as possible, as well as using robust USB switching method,
+so that the chip picks up the USB without any trouble.
 
-So this also means that a blank chip from the factory will enter the UBOOT mode just as well, because it doesn't have any valid firmware to start with.
+This likely will require switching the power to the chip so that the response could be received without any trouble too, as
+if you'll e.g. use your MCU's internal pullups, then there is a great chance that when you apply it to the chip that is not connected
+to power, the voltage will drop out significantly as the pullup voltage will go through a diode on the chip's I/O line to the VDDIO which then 
+tries to power up the chip, which starts to consume quite a current that makes the weak pullup's voltage to fall below the threshold
+where the GPIO pin is considered in LOW state, which will then provide a false acknowledge signal.
 
-## From a running firmware
+Another possible solution is the power up the chip, wait a little bit (somewhere about 10-20ms or so) and then send the key *once*.
+After you sent the key, you just switch the USB to the host side without catching the acknowledge from chip.
+This is really a hack but seemingly it works too.
 
-You can also enter this mode through the firmware that's on the chip.
+## Having troubles on booting
 
-If after connecting the device to USB it recognises as a disk like "BR21 DEVICE" or "BR25 UDISK",
-then you can enter this mode just via sending any SCSI command with opcodes 0xFB, 0xFC or 0xFD (the opcodes used by the UBOOT mode on USB),
-and after sending one of these commands the chip will reboot into the UBOOT mode.
+The chip can automatically enter the USB download mode if it for whatever reason it couldn't boot off the flash
+(for example if the flash is disconnected or there is not valid firmware in it)
 
-Chips like BR17 or BR21 will enter the UBOOT2.00 variant that's on the uboot.boot, but BR23/BR25/etc will enter the UBOOT1.00 from the MaskROM
-as their uboot.boot is just so small that it can't just hold a USB stack with required flashing stuff.
+So on blank chips, where the flash is erased from the factory, this will lead to chip immediatly entering the USB download mode,
+as there's obviously no valid firmware to boot.
 
-Note that this obviosly applies to the firmware that's compiled from the official SDK. (i.e. 100% of the devices i guess)
+## From the firmware
+
+The firmware built from the vendor's SDK usually has ability to use the USB download commands one way or another.
+
+First of all, the device in question should detect on USB as an USB disk (like BR17 DEVICE V1.00, BR25 UDISK V1.00)
+which is used to interact or enter the USB download mode, depending on the chip series in question.
+
+The behavior of this disk in our case basically can be one of two:
+
+- In chips where the CPU runs off the flash, executing the UBOOT commands will transfer the chip into either a UBOOT2.00 mode (in the uboot.boot, which is self-contained)
+  or into UBOOT1.00 (in the chip's ROM)
+
+- In chips where the CPU doesn't run off flash (but rather runs off SDRAM, for example), executing the UBOOT commands will work as intended (i.e. no transfer to the UBOOT1.00/2.00),
+  and usually it is also self-contained (like UBOOT2.00).

@@ -1,9 +1,23 @@
 # USB protocol
 
-A chip under UBOOT mode 
+A chip under USB download (UBOOT) mode shows up as an Mass Storage device with SCSI command interface, which uses some custom SCSI commands
+to interact with the chip.
+
+# General info
+
+The command block (CB) contains the opcode (e.g. 0xFB, 0xFC, 0xFD), the sub-opcode and zero or more argument bytes.
+
+As for the data, there is three possible variations:
+- Response packet
+- Data in (to chip)
+- Data out (from chip)
+
+Data in and Data out is rather self-explaining. Here's the actual data being transferred, for example the data to write into flash or the data read from flash.
+
+The response packet can be up to 16 bytes long and the first two bytes contain the first two bytes of the CB (that is, opcode and sub-opcode, respectively),
+however sometimes they doesn't quite match (e.g. in br17loader's "Get loader version" command.
 
 # Commands & stuff
-
 
 ## Opcodes
 
@@ -129,8 +143,8 @@ Look at the *dv15loader.enc* for an example of data transferred via this command
 ## Loader/UBOOT2.00 commands
 
 This is common overview of the commands, for more specfic details for each loader, check out:
-- [AC4100 loader](ac4100-loader.md)
-- [BR17 loader](br17-loader.md)
+- [AC4100 loader](ac4100loader.md) - quite different protocol actually
+- [BR17 loader](br17loader.md)
 
 ### Get online device
 

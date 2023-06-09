@@ -1,6 +1,6 @@
 # What is "UBOOT"
 
-"UBOOT" (not to be confused with "Das U-Boot"), Upgrade or Download mode is the mode which is used to download firmware into a builtin flash of the device
+"UBOOT" (not to be confused with "Das U-Boot"), Upgrade or (USB) Download mode is the mode which is used to download firmware into a builtin flash of the device
 (either one built into the chip itself or as a separate discrete component) over the USB bus.
 
 So when the chip under UBOOT mode is connected to the USB bus, it will show up as a disk like "BR17 UBOOT1.00", "BR21 UBOOT1.00", "DV15 UBOOT1.00", etc.
@@ -23,3 +23,7 @@ from the "bfu" files on the USB stick or SD card. (it can even recrypt the firmw
 
 Although on SDKs for newer chips (BR23/BR25/BR28/etc) the uboot.boot has shrunk down in size a lot, and so the only option that's left is the
 UBOOT1.00 from the MaskROM.
+
+On some chips, notably those which have SDRAM, the UBOOT2.00 is a part of the application, rather than being put into uboot.boot,
+while on chips where the CPU will run off flash because there's nothing else that can store large blob of code, accessing the disk of the application
+will transfer the chip into either the UBOOT2.00 mode or UBOOT1.00 mode.
