@@ -32,10 +32,11 @@ args = ap.parse_args()
 ###### ###### ###### ###### ###### ###### ###### ###### ###### ###### ######
 
 scriptroot = pathlib.Path(__file__).parent
+dataroot = scriptroot/'data'
 
-JL_chips        = yaml.load(open(scriptroot/'loaderblobs'/'chips.yaml'),        Loader=yaml.SafeLoader)
-JL_usb_loaders  = yaml.load(open(scriptroot/'loaderblobs'/'usb-loaders.yaml'),  Loader=yaml.SafeLoader)
-JL_uart_loaders = yaml.load(open(scriptroot/'loaderblobs'/'uart-loaders.yaml'), Loader=yaml.SafeLoader)
+JL_chips        = yaml.load(open(dataroot/'chips.yaml'),        Loader=yaml.SafeLoader)
+JL_usb_loaders  = yaml.load(open(dataroot/'usb-loaders.yaml'),  Loader=yaml.SafeLoader)
+JL_uart_loaders = yaml.load(open(dataroot/'uart-loaders.yaml'), Loader=yaml.SafeLoader)
 
 print('** %d chips, %d USB loaders, %d UART loaders **' % (len(JL_chips), len(JL_usb_loaders), len(JL_uart_loaders)))
 
@@ -666,7 +667,7 @@ with JL_UBOOT(device) as dev:
         if not gotcustom:
             print("Using the builtin loader specs")
             loaderspec = JL_usb_loaders
-            loaderroot = scriptroot
+            loaderroot = dataroot
 
         #
         # Is there a loader for our chip?
