@@ -32,7 +32,7 @@ args = ap.parse_args()
 ###### ###### ###### ###### ###### ###### ###### ###### ###### ###### ######
 
 scriptroot = pathlib.Path(__file__).parent
-dataroot = scriptroot/'data'
+dataroot   = scriptroot/'data'
 
 JL_chips        = yaml.load(open(dataroot/'chips.yaml'),        Loader=yaml.SafeLoader)
 JL_usb_loaders  = yaml.load(open(dataroot/'usb-loaders.yaml'),  Loader=yaml.SafeLoader)
@@ -58,8 +58,6 @@ dev_type_strs = {
     0x16: 'SPI NOR flash on SPI1',
     0x17: 'SPI NOR flash on SPI1',
 }
-
-
 
 def makebar(ratio, length):
     bratio = int(ratio * length)
@@ -135,7 +133,7 @@ def print_largeletters(string):
 
     print()
 
-
+###### ###### ###### ###### ###### ###### ###### ###### ###### ###### ######
 
 class DasShell(cmd.Cmd):
     intro = \
@@ -621,8 +619,8 @@ with JL_UBOOT(device) as dev:
         print("Oh well, chip %s is either not supported or is invalid." % chipname)
         exit(2)
 
-    family = JL_chips[chipname]
-    print('Chip: %s (%s)' % (chipname.upper(), ', '.join(family['name'])))
+    chipspec = JL_chips[chipname]
+    print('Chip: %s (%s)' % (chipname.upper(), ', '.join(chipspec['name'])))
 
     #print_largeletters(chipname)
 
@@ -637,7 +635,7 @@ with JL_UBOOT(device) as dev:
         runtheloader = True
 
     if runtheloader:
-        gotcustom = False
+        custom_loaderspecs = None
 
         #
         # Is there any custom loader spec passed?
@@ -646,45 +644,49 @@ with JL_UBOOT(device) as dev:
             print("Trying to use custom loader specs from [%s]..." % args.custom_loaders)
 
             try:
-                loaderspec = yaml.load(open(args.custom_loaders), Loader=yaml.SafeLoader)
-                loaderroot = pathlib.Path(args.custom_loaders).parent
-
-                gotcustom = True
+                custom_loaderspecs = yaml.load(open(args.custom_loaders), Loader=yaml.SafeLoader)
             except Exception as e:
                 print("Something went wrong while loading the custom loader spec file:", e)
 
         #
-        # We did load the custom loader spec, so check if it has that chip.
+        # Is there a chip and its USB loader spec in the custom loader spec?
         #
-        if gotcustom:
-            if chipname not in loaderspec:
-                print("There is no USB loader for %s in the provided loader spec" % chipname)
-                gotcustom = False
+        if custom_loaderspecs is not None:
+            if chipname not in custom_loaderspecs:
+                print("The custom loader spec does not contain definition for chip %s" % chipname)
+                custom_loaderspecs = None
+
+            elif 'usb' not in custom_loaderspecs[chipname]:
+                print("There is no USB loader in the custom loader spec for chip %s" % chipname)
+                custom_loaderspecs = None
+
+            else:
+                loaderspec = custom_loaderspecs[chipname]['usb']
+                loaderroot = pathlib.Path(args.custom_loaders).parent
 
         #
-        # Use the builtin loader spec if we can't use a custom loader spec.
+        # If we didn't load the custom loader specs, then try to use the builtin one..
         #
-        if not gotcustom:
+        if custom_loaderspecs is None:
             print("Using the builtin loader specs")
-            loaderspec = JL_usb_loaders
+
+            if chipname not in JL_usb_loaders:
+                print("There is no USB loader for chip %s" % chipname)
+                exit(3)
+
+            loaderspec = JL_usb_loaders[chipname]
             loaderroot = dataroot
 
         #
-        # Is there a loader for our chip?
+        # Upload the loader!
         #
-        if chipname not in loaderspec:
-            print("Sorry, but there is no USB loader available for %s." % chipname)
-            exit(3)
-
-        loader = loaderspec[chipname]
-
-        with open(loaderroot/loader['file'], 'rb') as f:
-            blocksz = loader.get('blocksize', 512)
+        with open(loaderroot/loaderspec['file'], 'rb') as f:
+            blocksz = loaderspec.get('blocksize', 512)
 
             #
             # Write
             #
-            addr = loader['address']
+            addr = loaderspec['address']
             while True:
                 block = f.read(blocksz)
                 if block == b'': break
@@ -698,7 +700,7 @@ with JL_UBOOT(device) as dev:
             #
             # Verify
             #
-            addr = loader['address']
+            addr = loaderspec['address']
             while True:
                 block = f.read(blocksz)
                 if block == b'': break
@@ -710,7 +712,7 @@ with JL_UBOOT(device) as dev:
 
                 addr += len(block)
 
-        if 'argument' not in loader:
+        if 'argument' not in loaderspec:
             print('This loader does not seem to have a default argument.')
             loader['argument'] = (0<<12) | (4<<4) | (1<<0) # spi mode=0, div=4, mem=1 (spi nor)
 
@@ -718,13 +720,13 @@ with JL_UBOOT(device) as dev:
             print('Overriding the default loader argument (%04x) with %04x' % (loader['argument'], args.loader_arg))
             loader['argument'] = args.loader_arg
 
-        if 'entry' not in loader:
+        if 'entry' not in loaderspec:
             loader['entry'] = loader['address']
 
-        print("Running loader (loaded to 0x%(address)04x) on 0x%(entry)04x, with argument 0x%(argument)04x..." % loader)
+        print("Running loader (loaded to 0x%(address)04x) on 0x%(entry)04x, with argument 0x%(argument)04x..." % loaderspec)
 
         try:
-            dev.mem_jump(loader['entry'], loader['argument'])
+            dev.mem_jump(loaderspec['entry'], loaderspec['argument'])
             print("Loader runs successfully.")
         except SCSIException:
             print("Failed to run loader.")
@@ -738,7 +740,7 @@ with JL_UBOOT(device) as dev:
     loader = JL_Loader(dev)
 
     print(".-----------------.-----------------------------------------------.")
-    print("| Quick info      : %s (%s)" % (chipname.upper(), '/'.join(family['name'])))
+    print("| Quick info      : %s (%s)" % (chipname.upper(), '/'.join(chipspec['name'])))
     print("|-----------------:-----------------------------------------------.")
 
     try:

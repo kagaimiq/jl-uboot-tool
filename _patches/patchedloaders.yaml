@@ -1,5 +1,6 @@
 br17:
-    file: br17loader_patch/patched.bin
-    address: 0x2000
-    entry: 0x4000
-    argument: 0x0011
+    usb:
+        file: br17loader_patch/patched.bin
+        address: 0x2000
+        entry: 0x4000
+        argument: 0x0011
