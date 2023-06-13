@@ -1,4 +1,4 @@
-# ac4100loader
+# AC4100 loader
 
 This describes commands and their behavior specific to ac4100loader
 

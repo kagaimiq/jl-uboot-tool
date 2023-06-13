@@ -1,4 +1,4 @@
-# br17loader
+# BR17 loader
 
 This describes commands and their behavior specific to the br17loader (v204).
 
