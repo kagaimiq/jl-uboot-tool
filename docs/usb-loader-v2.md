@@ -2,10 +2,34 @@
 
 This is the protocol version is used by most loaders, and so far by the UBOOT2.00 too.
 
-This is all-inclusive list of commands, which might be available in some loaders, but some are not.
-For specifics on each loader, check out these:
+This is all-inclusive list of commands and their behavior,
+for more specific info on each loader look there:
 
+- [bc51loader](bc51loader.md)
 - [br17loader](br17loader.md)
+
+## Differences
+
+These are the differences between loaders and their protocol support.
+
+- [bc51loader](bc51loader.md)
+  * __Base protocol__
+  * Flash erasing (FB00, FB01, FB02)
+  * Flash write (FB04) and read (FD05)
+  * Memory write (FB06) and read (FD07) - mimics the UBOOT1.00 one
+  * Memory jump (FB08) - more or less the UBOOT1.00 one except for the hooks, etc.
+- [br17loader](br17loader.md)
+  * Adds flash CRC16 calculation (FC0E, FC13)
+  * Adds things fetch commands (FC0F, FC10, FC11)
+  * Adds chipkey write command (FC12)
+  * USB buffer size, loader version info (FC14, FC15)
+  * Flash reading needs to be unlocked via "Read chipkey" (FC09) command, so..
+  * ..the "read key" command now got an argument, which should be 0xac6900 to be able to unlock the flash reading
+- br20loader
+  * New memory type: OTP (7)
+  * Adds "Get MaskROM ID" command (FC16)
+  * Flash reading now doesn't need any unlocking (only specific to br17loader?)
+  * ????
 
 ## Opcodes
 

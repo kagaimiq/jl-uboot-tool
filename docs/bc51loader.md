@@ -1,6 +1,9 @@
-# BR17 loader
+# BC51 loader
 
-This describes commands and their behavior specific to the br17loader (v204).
+This describes commands and their behavior specific to the bc51loader.
+
+As there's no command to get the USB buffer size, the buffers seems to be 512 bytes long there.
+And there are two buffers: for data to be written (flash/memory write, set flash cmd) and data to be read (flash/memory read)
 
 ## Arguments field
 
@@ -11,12 +14,7 @@ This describes commands and their behavior specific to the br17loader (v204).
 - bit4..11 = Clock speed
   * 0 = div1
   * 1..255 = div1..255
-  * Clock base is usually 48 MHz
-- bit12..15 = SPI mode
-  * 0 = Half-duplex SPI (2wire 1bit)
-  * 1 = SPI (3wire 1bit)
-  * 2 = DSPI (3wire 2bit)
-  * 3 = QSPI (3wire 4bit)
+  * Clock base is probably 48 MHz
 
 ## Opcodes
 
@@ -41,14 +39,6 @@ This describes commands and their behavior specific to the br17loader (v204).
 - 0x0B = [Read ID](#read-id)
 - 0x0C = [Run app](#run-app)
 - 0x0D = [Set flash command](#set-flash-command)
-- 0x0E = [Flash CRC16 (special)](#flash-crc16-special)
-- 0x0F = fetch thing1 (ver.bin)
-- 0x10 = fetch thing2 (BTIF)
-- 0x11 = fetch thing3 (VMIF)
-- 0x12 = [Write (chip)key](#write-key)
-- 0x13 = [Flash CRC16](#flash-crc16)
-- 0x14 = [Get USB buffer size](#get-usb-buffer-size)
-- 0x15 = [Get loader version](#get-loader-version)
 
 ### 0xFD sub-opcodes
 
@@ -96,9 +86,6 @@ This describes commands and their behavior specific to the br17loader (v204).
   * SS:ss = Read size
 - Data out: Data read from flash
 
-**Note:** This command won't be processed if you didn't execute the "read key" command with 'address' argument set to 0xAC6900.
-Executing the same command with a different 'address' argument also locks the ability to read flash.
-
 ### Write memory
 
 - Command: `FB 06 AA:aa:aa:aa SS:ss cc:CC`
@@ -130,16 +117,12 @@ and before calling code the timer is stopped and the interrupts are disabled.
 
 ### Read key
 
-- Command: `FC 09 AA:aa:aa:aa`
-  * AA:aa:aa:aa = 'address', should be 0xAC6900 to be able to read flash
+- Command: `FC 09 -- -- -- --`
 - Data out: `FC 09 -- -- -- -- KK:kk -- -- -- -- -- -- -- --`
   * KK:kk = chipkey
 
 **Note:** the chipkey value is first encrypted in little-endian using Mengli crypt,
 and then stored there in big-endian.
-
-**Note:** Reading flash won't work until this command is executed with the 'address' argument set to 0xAC6900.
-Similarly, executing this command with the 'address' set to something other than 0xAC6900 will lock out flash reading.
 
 ### Get online device
 
@@ -180,52 +163,4 @@ Similarly, executing this command with the 'address' set to something other than
   * ff = Read status register command (e.g. 0x05)
   * gg = Write enable command (e.g. 0x06)
   * hh = Write status register command (e.g. 0x01)
-
-### Flash CRC16 (special)
-
-- Command: `FC 0E AA:aa:aa:aa SS:ss`
-  * AA:aa:aa:aa = Flash address
-  * SS:ss = Size
-- Data out: `FC 0E CC:cc`
-  * CC:cc = Calculated CRC16 of the flash area
-
-**Note:** the special stuffs are:
-
-If address 0x0 was requested, it fills the 0x1e0-0x1ff of the buffer with 0xff.
-
-If the address is 0x200 below the syd size (decrypted block 0x00-0x20's bytes 0x04-0x07),
-then the bytes 0x1fc-0x1ff is filled with byte at 0x1fb.
-
-### Write key
-
-**WARNING: BE CAREFUL, THIS OPERATION IS IRREVERSIBLE!**
-
-- Command: `FC 12 -- -- KK:kk`
-  * KK:kk = chipkey value
-- Data out: `FC 12 VV:vv:vv:vv`
-  * VV:vv:vv:vv = result code (or written data)
-
-### Flash CRC16
-
-- Command: `FC 13 AA:aa:aa:aa SS:ss`
-  * AA:aa:aa:aa = Flash address
-  * SS:ss = Size
-- Data out: `FC 13 CC:cc`
-  * CC:cc = Calculated CRC16 of the flash area
-
-... the CRC16 register is updated on the SPI DMA ?!
-
-### Get USB buffer size
-
-- Command: `FC 14 -- -- -- --`
-- Data out: `FC 14 SS:ss:ss:ss`
-  * SS:ss:ss:ss = USB buffer size (0x8000 / 32768 bytes)
-
-### Get loader version
-
-- Command: `FC 15 -- -- -- --`
-- Data out: `FC 13 XX vv:vv:vv:VV`
-  * *Yes, there IS mismatch in command codes!*
-  * XX = 0x00
-  * vv:vv:vv:VV = Version code in ASCII (e.g. 0x76323034 = v204) ~ yes, it's in little-endian
 
