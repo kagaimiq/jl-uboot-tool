@@ -328,7 +328,7 @@ class DasShell(cmd.Cmd):
             return
 
         try:
-            resp = self.dev.cmd_exec(opcode, data, ignore_wrong_resp=True)
+            resp = self.dev.cmd_exec(opcode, data, check_response=True)
             print('Response: %04x / [%s]' % (resp[0], resp[1].hex(' ')))
         except Exception as e:
             print("Command execution failed: ", e)

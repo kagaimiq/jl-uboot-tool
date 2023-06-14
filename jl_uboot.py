@@ -143,7 +143,7 @@ class JL_Loader:
     def version(self):
         """ Get loader version """
         # Sometimes the cmd in response is wrong... FIXME
-        rcmd, resp = self.dev.cmd_exec(JL_Loader.CMD_GET_LOADER_VER, b'', ignore_wrong_resp=True)
+        rcmd, resp = self.dev.cmd_exec(JL_Loader.CMD_GET_LOADER_VER, b'', check_response=False)
         return str(resp[1:5][::-1], 'ascii')
 
     def maskrom_id(self):
@@ -233,7 +233,7 @@ class JL_UBOOT:
 
         return cdb
 
-    def cmd_exec(self, cmd, args, ignore_wrong_resp=False):
+    def cmd_exec(self, cmd, args, check_response=True):
         resp = bytearray(16)
         self.dev.execute(self.cmd_prepare_cdb(cmd, args), None, resp)
 
@@ -242,11 +242,13 @@ class JL_UBOOT:
 
         #print('!! RESPONSE !!', '[%04x]' % rcmd, '+', '{'+resp.hex('.')+'}')
 
-        if ignore_wrong_resp:
-            return (rcmd, resp)
-        else:
+        if check_response:
+            # Check if the command in response matched the sent one
             assert(cmd == rcmd)
             return resp
+        else:
+            # Return raw-ish response
+            return (rcmd, resp)
 
     def cmd_exec_datain(self, cmd, args, dlen):
         data = bytearray(dlen)
