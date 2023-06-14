@@ -22,11 +22,6 @@ bd19:
     address: 0x2000
     encryption: MengLi
 
-bd29:
-    file: loaderblobs/uart/bd29loader.uart
-    address: 0x2000
-    encryption: MengLi
-
 # -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- #
 
 br23:
