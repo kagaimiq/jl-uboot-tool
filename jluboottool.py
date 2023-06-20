@@ -138,17 +138,15 @@ def print_largeletters(string):
 class DasShell(cmd.Cmd):
     intro = \
     """
-  =========================================================
-  .-------------------.
-  |     _____________ | .------------------------------.
-  |    /___  __  ___/ | |       JieLi UBOOT Tool
-  |       / / / /     | |        - Das Shell -
-  |  __  / / / /      | `------------------------------.
-  | / /_/ / / /____   |    -*- JieLi tech console -*-  |
-  | \____/ /______/   |   Type 'help' or '?' for help. |
-  |                   | `------------------------------'
-  `-------------------'
-  =========================================================
+  .------------------------------------------------------.
+  |     _____________   .------------------------------. |
+  |    /___  __  ___/   |       JieLi UBOOT Tool         |
+  |       / / / /       |        - Das Shell -           |
+  |  __  / / / /        `------------------------------. |
+  | / /_/ / / /____        -*- JieLi tech console -*-  | |
+  | \____/ /______/       Type 'help' or '?' for help. | |
+  |                     `------------------------------' |
+  `------------------------------------------------------'
     """
     prompt = '=>JL: '
 
@@ -156,9 +154,10 @@ class DasShell(cmd.Cmd):
         super(DasShell, self).__init__()
         self.dev = dev
 
-
-        self.bufsize = self.dev.usb_buffer_size()
-
+        try:
+            self.buffsize = self.dev.usb_buffer_size()
+        except:
+            self.buffsize = 512
 
 
     def emptyline(self):
@@ -365,16 +364,12 @@ class DasShell(cmd.Cmd):
         print()
 
     def flash_write_file(self, address, length, fil):
-        buffsz = self.dev.usb_buffer_size()
-
         dlength = 0
 
         while length > 0:
-            block = fil.read(buffsz)
+            block = fil.read(self.buffsize)
             if block == b'': break
             n = len(block)
-
-            #print("\rWriting %x-%x..." % (address, address + length - 1), end='', flush=True)
 
             t = time.time()
             self.dev.flash_write(address, block)
@@ -392,14 +387,10 @@ class DasShell(cmd.Cmd):
         print()
 
     def flash_read_file(self, address, length, fil):
-        buffsz = self.dev.usb_buffer_size()
-
         dlength = 0
 
         while length > 0:
-            n = min(buffsz, length)
-
-            #print("\rReading %x-%x..." % (address, address + length - 1), end='', flush=True)
+            n = min(self.buffsize, length)
 
             t = time.time()
             data = self.dev.flash_read(address, n)
@@ -564,12 +555,157 @@ class DasShell(cmd.Cmd):
             print("<length> [%s] is not a number!" % args[1])
             return
 
-        buffsz = self.dev.usb_buffer_size()
-
         while length > 0:
-            n = min(length, buffsz)
+            n = min(length, self.buffsize)
 
             hexdump(self.dev.flash_read(address, n), address=address)
+
+            address += n
+            length -= n
+
+    #------#------#------#------#------#------#------#------#------#------#
+
+    def do_memread(self, args):
+        """Read memory to file.
+        memread <address> <length> <file>
+        """
+
+        args = args.split(maxsplit=2)
+
+        if len(args) < 3:
+            print("Not enough arguments!")
+            self.do_help('memread')
+            return
+
+        try:
+            address = int(args[0], 0)
+        except ValueError:
+            print("<address> [%s] is not a number!" % args[0])
+            return
+
+        try:
+            length = int(args[1], 0)
+        except ValueError:
+            print("<length> [%s] is not a number!" % args[1])
+            return
+
+        try:
+            fil = open(args[2], 'wb')
+        except Exception as e:
+            print("Can't open file [%s] - %s" % (args[2], e))
+            return
+
+        with fil:
+            dlength = 0
+
+            while length > 0:
+                n = min(256, length) # FIXME: the BR25 loader doesn't like reading more than 256+15 bytes!
+
+                t = time.time()
+                data = self.dev.mem_read(address, n)
+                t = time.time() - t
+
+                fil.write(data)
+
+                length -= n
+                dlength += n
+
+                ratio = dlength / (dlength + length)
+                print("\rReading %08x [%s] %3d%%" % (address, makebar(ratio, 40), ratio * 100), end='')
+                print(" %.2f KB/s" % (len(data) / 1000 / t), end='', flush=True)
+
+                address += n
+
+            print()
+
+    #-------------------------------------
+
+    def do_memwrite(self, args):
+        """Write file to memory.
+        memwrite <address> <file>
+        """
+
+        args = args.split(maxsplit=1)
+
+        if len(args) < 2:
+            print("Not enough arguments!")
+            self.do_help('memwrite')
+            return
+
+        try:
+            address = int(args[0], 0)
+        except ValueError:
+            print("<address> [%s] is not a number!" % args[0])
+            return
+
+        try:
+            fil = open(args[1], 'rb')
+        except Exception as e:
+            print("Can't open file [%s] - %s" % (args[1], e))
+            return
+
+        with fil:
+            fil.seek(0, 2)
+            length = fil.tell()
+            fil.seek(0)
+
+            dlength = 0
+
+            while length > 0:
+                block = fil.read(256) # FIXME: same deal
+                if block == b'': break
+                n = len(block)
+
+                t = time.time()
+                self.dev.mem_write(address, block)
+                t = time.time() - t
+
+                length -= n
+                dlength += n
+
+                ratio = dlength / (dlength + length)
+                print("\rWriting %08x [%s] %3d%%" % (address, makebar(ratio, 40), ratio * 100), end='')
+                print(" %.2f KB/s" % (len(block) / 1000 / t), end='', flush=True)
+
+                address += n
+
+            print()
+
+
+    #-------------------------------------
+
+    def do_memdump(self, args):
+        """Dump memory to console.
+        memdump <address> [<length>]
+
+        If <length> is not specified, then it will default to 256 bytes.
+        """
+
+        args = args.split(maxsplit=2)
+
+        if len(args) < 1:
+            print("Not enough arguments!")
+            self.do_help('memdump')
+            return
+
+        try:
+            address = int(args[0], 0)
+        except ValueError:
+            print("<address> [%s] is not a number!" % args[0])
+            return
+
+        try:
+            length = int(args[1], 0)
+        except IndexError:
+            length = 256
+        except ValueError:
+            print("<length> [%s] is not a number!" % args[1])
+            return
+
+        while length > 0:
+            n = min(length, 256) # FIXME: same deal
+
+            hexdump(self.dev.mem_read(address, n), address=address)
 
             address += n
             length -= n
@@ -714,14 +850,14 @@ with JL_UBOOT(device) as dev:
 
         if 'argument' not in loaderspec:
             print('This loader does not seem to have a default argument.')
-            loader['argument'] = (0<<12) | (4<<4) | (1<<0) # spi mode=0, div=4, mem=1 (spi nor)
+            loaderspec['argument'] = (0<<12) | (4<<4) | (1<<0) # spi mode=0, div=4, mem=1 (spi nor)
 
         if args.loader_arg is not None:
-            print('Overriding the default loader argument (%04x) with %04x' % (loader['argument'], args.loader_arg))
-            loader['argument'] = args.loader_arg
+            print('Overriding the default loader argument (%04x) with %04x' % (loaderspec['argument'], args.loader_arg))
+            loaderspec['argument'] = args.loader_arg
 
         if 'entry' not in loaderspec:
-            loader['entry'] = loader['address']
+            loaderspec['entry'] = loaderspec['address']
 
         print("Running loader (loaded to 0x%(address)04x) on 0x%(entry)04x, with argument 0x%(argument)04x..." % loaderspec)
 
@@ -739,19 +875,19 @@ with JL_UBOOT(device) as dev:
 
     loader = JL_Loader(dev)
 
-    print(".-----------------.-----------------------------------------------.")
+    print(".-----------------.------------------------------------------------")
     print("| Quick info      : %s (%s)" % (chipname.upper(), '/'.join(chipspec['name'])))
-    print("|-----------------:-----------------------------------------------.")
+    print("|-----------------:------------------------------------------------")
 
     try:
         odev = loader.online_device()
-        print("| Online device   : id=<%06x> type=%d (%s)"
+        print("| Online device   : id: 0x%06x, type: %d (%s)"
                     % (odev['id'], odev['type'], dev_type_strs.get(odev['type'], 'unknown')))
     except SCSIException:
         pass #print("(!) Failed to get online device info")
 
     try:
-        print("| Chip key        : <%04X>" % loader.chip_key())
+        print("| Chip key        : 0x%04X" % loader.chip_key())
     except SCSIException:
         pass #print("(!) Failed to get chip key")
 
@@ -761,12 +897,12 @@ with JL_UBOOT(device) as dev:
         pass #print("(!) Failed to get USB buffer size")
 
     #try:
-    #    print("Status          : <%02x>" % loader.read_status())
+    #    print("Status          : 0x%02x" % loader.read_status())
     #except SCSIException:
     #    pass #print("(!) Failed to read status")
 
     #try:
-    #    print("| Device ID       : <%06x>" % loader.read_id())
+    #    print("| Device ID       : 0x%06x" % loader.read_id())
     #except SCSIException:
     #    pass #print("(!) Failed to read device ID")
 
@@ -776,11 +912,11 @@ with JL_UBOOT(device) as dev:
     #    pass #print("(!) Failed to get loader version")
 
     #try:
-    #    print("| MaskROM ID      : <%08x>" % loader.maskrom_id())
+    #    print("| MaskROM ID      : 0x%08x" % loader.maskrom_id())
     #except SCSIException:
     #    pass #print("(!) Failed to get MaskROM ID")
 
-    print("`-----------------'-----------------------------------------------'")
+    print("`-----------------'------------------------------------------------")
 
     #
     # Let's enter the shell!
