@@ -296,6 +296,9 @@ br23:
             cpusfr:
                 address: 0x100000
                 size: 0x10000
+            btsfr: # i guess that's what it is
+                address: 0x1c0000
+                size: 0x20000
 
     uboot1.00:
         quirks:
@@ -335,6 +338,9 @@ br25:
             cpusfr:
                 address: 0x100000
                 size: 0x10000
+            btsfr: # i guess that's what it is
+                address: 0x1c0000
+                size: 0x20000
 
     uboot1.00:
         quirks:
