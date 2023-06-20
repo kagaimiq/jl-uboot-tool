@@ -59,7 +59,6 @@ def hexdump(data, width=16, address=0):
         s += '|'
 
         print(s)
-    print()
 
 #------------------------------------------------
 
