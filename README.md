@@ -26,7 +26,10 @@ It is also used to find and choose devices when no '--device' argument was given
 
 ## Supported chips
 
-Realistically you can expect it to work with AC69xx/AC70xx/etc series chips for now.
+Realistically you can probably expect it to work with AC460/AC461/AC690/AC691/AC692/AC693/AC695/AC696N (BT15/BC51/BR17/BR20/BR21/BR22/BR23/BR25) series chips for now.
+
+Other series might not work because they (seem to) behave a bit differently than these series above.
+These quirks should be properly handled, but they aren't...
 
 ## See also
 
