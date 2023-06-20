@@ -6,11 +6,11 @@ ac4100:
 
 bt15:
     file: loaderblobs/usb/bt15loader.bin
-    address: 0x2000 # maybe
+    address: 0x2000
 
 bc51:
     file: loaderblobs/usb/bc51loader.bin
-    address: 0x2000 # maybe
+    address: 0x2000
 
 # -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- #
 
@@ -28,11 +28,7 @@ dv15:
     address: 0xf02000
     encryption: RxGp
     block-size: 512
-
-    # ~ guessed
-    # b0-b3   = dl mode (1 = flash)
-    # b4-b11  = speed (0 = 'default', else = clock divider)
-    argument: 0x0011
+    argument: 0x0011   # div1, SPI flash
 
 dv16:
     file: loaderblobs/usb/dv16loader.bin
@@ -49,13 +45,7 @@ sh54:
 # sh55: there isn't a USB loader for it? but only UART?
 
 uc03:
-    # originally it's in some weird format,
-    # the file is a sydfs where there are two files - version and uboot.
-    # the uboot file is the actual loader binary
-    # also there's the usbboot.bin file laying around in the SDK
-    # which seems to implement the UBOOT1.00 protocol...
-    # the UART loader isn't.
-
+    # TODO: use the original format (the sydfs with files 'version' and 'uboot')
     file: loaderblobs/usb/uc03loader.bin
     address: 0x0
     encryption: MengLi
@@ -80,33 +70,21 @@ bd29:
 br17:
     file: loaderblobs/usb/br17loader.bin
     address: 0x2000
-
-    # b0-b3   = dl mode (1 = flash, 4/5 = flash too??)
-    # b4-b11  = speed (0 = 'default', else = clock divider)
-    # b12-b13 = spi mode (...)
-    argument: 0x0011
+    argument: 0x0011   # div1, SPI flash
 
 br20:
     file: loaderblobs/usb/br20loader.bin
     address: 0x2000
-
-    # b0-b3   = dl mode (1 = flash, 7 = OTP)
-    argument: 0x0007
+    argument: 0x0007   # OTP
 
 br21:
     file: loaderblobs/usb/br21loader.bin
     address: 0x2000
-
-    # b0-b3   = dl mode (1 = flash, 7 = OTP)
-    argument: 0x0001
+    argument: 0x0001   # SPI flash
 
 br22:
     file: loaderblobs/usb/br22loader.bin
     address: 0x2000
-
-    #?? maybe.. just assume!
-    # b0-b3   = dl mode (1 = flash, 7 = OTP)
-    argument: 0x0001
 
 br23:
     file: loaderblobs/usb/br23loader.bin

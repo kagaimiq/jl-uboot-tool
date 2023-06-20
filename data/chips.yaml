@@ -1,6 +1,6 @@
 # Chips definition
 
-ac4100:
+ac4100: # CD03 or CD003
     name:
         - AC410N
     arch: or1k
@@ -8,7 +8,7 @@ ac4100:
 bt15:
     name:
         - AC460N
-    arch: blackfin-dv10
+    arch: blackfin
 
 bc51:
     name:
@@ -20,7 +20,7 @@ bc51:
 dv12:
     name:
         - AC520N
-    arch: blackfin-dv12
+    arch: blackfin
 
 dv15:
     name:
@@ -39,25 +39,30 @@ sh54:
     name:
         - AD14N
         - AD104N
+    arch: pi32
 
 sh55:
     name:
         - AD15N
         - AD105N
+    arch: pi32
 
 uc03:
     name:
         - AD16N
+    arch: pi32v2
 
 # -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- #
 
 bd19:
     name:
         - AC632N
+    arch: q32s
 
 bd29:
     name:
         - AC630N
+    arch: q32s
 
 # -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- #
 
