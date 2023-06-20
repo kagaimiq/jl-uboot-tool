@@ -15,6 +15,27 @@ bc51:
         - AC461N
     arch: pi32
 
+    memory:
+        sram:
+            - address: 0x00000
+              size: 0x18000
+              name: ram0
+            - address: 0x18000
+              size: 0x40000
+              name: icache-data
+            - address: 0x1c000
+              size: 0x200
+              name: vectors
+            - address: 0x40000
+              size: 0x2800
+              name: ram1
+        maskrom: # not confirmed
+            address: 0x50000
+            size: 0x2800
+        sfc:
+            address: 0x1000000
+            size: 0x1000000
+
 # -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- #
 
 dv12:
@@ -22,16 +43,89 @@ dv12:
         - AC520N
     arch: blackfin
 
+    memory:
+        sram:
+            - address: 0x1f00000
+              size: 0x10000
+              name: ram0
+            - address: 0x1f10000
+              size: 0x4000
+              name: ram1
+            - address: 0x1fa0000
+              size: 0x18000
+              name: vram
+        sdram:
+            address: 0x20000000
+            size: 0x800000
+        bus:
+            lsb:
+                address: 0x1f60000
+                size: 0x10000
+            hsb:
+                address: 0x1f70000
+                size: 0x10000
+
 dv15:
     name:
         - AC521N
     arch: pi32v2
+
+    memory:
+        sram:
+            - address: 0xf00000
+              size: 0x10000
+              name: ram0
+        sdram:
+            address: 0x1000000
+            size: 0x800000
+        sfc:
+            address: 0x0000000
+            size: 0x1000000
+        bus:
+            lsb:
+                address: 0xf60000
+                size: 0x10000
+            hsb:
+                address: 0xf70000
+                size: 0x8000
+            eva:
+                address: 0xf78000
+                size: 0x8000
+
+    uboot1.00:
+        quirks:
+            rxgp-crypt-mem-write-cmd: yes     # maybe indicate it a different way
 
 dv16:
     name:
         - AC540N
         - AC560N
     arch: pi32v2
+
+    memory:
+        sram:
+            - address: 0x3f00000
+              size: 0x10000
+              name: ram0
+            - address: 0x3fa0000
+              size: 0x28800    # quite weird
+              name: vram
+        sdram:
+            address: 0x4000000
+            size: 0x2000000   # exactly 32 MiB? or more?
+        sfc:
+            address: 0x2000000
+            size: 0x400000   # 4 MiB?
+        bus:
+            lsb:
+                address: 0x3f80000
+                size: 0x10000
+            hsb:
+                address: 0x3f90000
+                size: 0x8000
+            eva:
+                address: 0x3f98000
+                size: 0x8000
 
 # -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- #
 
@@ -40,6 +134,10 @@ sh54:
         - AD14N
         - AD104N
     arch: pi32
+
+    uboot1.00:
+        quirks:
+            memory-rw-mengli-crypt: yes
 
 sh55:
     name:
@@ -59,10 +157,18 @@ bd19:
         - AC632N
     arch: q32s
 
+    uboot1.00:
+        quirks:
+            memory-rw-mengli-crypt: yes
+
 bd29:
     name:
         - AC630N
     arch: q32s
+
+    uboot1.00:
+        quirks:
+            memory-rw-mengli-crypt: yes
 
 # -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- #
 
@@ -71,15 +177,89 @@ br17:
         - AC690N
     arch: pi32
 
+    memory:
+        sram:
+            - address: 0x00000
+              size: 0x1a000
+              name: ram0
+            - address: 0x1a000
+              size: 0x4000
+              name: icache-data
+            - address: 0x1e000
+              size: 0x200
+              name: vectors
+            - address: 0x40000
+              size: 0x6000
+              name: ram1
+        maskrom:
+            address: 0x50000
+            size: 0x2800
+        bus:
+            lsb:
+                address: 0x60000
+                size: 0x10000
+            hsb:
+                address: 0x70000
+                size: 0x10000
+            btsfr:
+                address: 0xe0000
+                size: 0x10000
+            zebra:
+                address: 0xf0000
+                size: 0x10000
+
 br20:
     name:
         - AC691N
     arch: pi32
 
+    memory:
+        sram:
+            - address: 0x00000
+              size: 0x14000 # at least
+              name: ram
+            - address: 0x1e000
+              size: 0x200 # maybe
+              name: vectors
+        maskrom:
+            address: 0x20000
+            size: 0x20000 # really??
+        otp:
+            address: 0x1ff0000  # right in last 64k of the SFC mapping
+            size: 0x10000
+        bus:
+            lsb:
+                address: 0x60000
+                size: 0x10000
+            hsb:
+                address: 0x70000
+                size: 0x10000
 br21:
     name:
         - AC692N
     arch: pi32
+
+    memory:
+        sram:
+            - address: 0x00000
+              size: 0x10000
+              name: ram0
+            - address: 0x10000
+              size: 0x10000 # last 16k is used by icache if enabled
+              name: ram1
+        maskrom:
+            address: 0x20000
+            size: 0x2800
+        bus:
+            lsb:
+                address: 0x60000
+                size: 0x10000
+            hsb:
+                address: 0x70000
+                size: 0x10000
+            btsfr:
+                address: 0xe0000
+                size: 0x20000
 
 br22:
     name:
@@ -92,6 +272,35 @@ br23:
         - AC695N
     arch: pi32v2
 
+    memory:
+        sram:
+            - address: 0x00000
+              size: 0x2c000
+              name: ram0
+            - address: 0x2c000
+              size: 0x4000
+              name: ram1
+            - address: 0xf8000
+              size: 0x4000
+              name: icache-data
+        maskrom:
+            address: 0x110000
+            size: 0x2800
+        bus:
+            lsb:
+                address: 0x1e0000
+                size: 0x10000
+            hsb:
+                address: 0x1f0000
+                size: 0x10000
+            cpusfr:
+                address: 0x100000
+                size: 0x10000
+
+    uboot1.00:
+        quirks:
+            memory-rw-mengli-crypt: yes
+
 br25:
     name:
         - AC636N
@@ -99,10 +308,46 @@ br25:
         - AC608N
     arch: pi32v2
 
+    memory:
+        sram:
+            - address: 0x10000
+              size: 0x20000
+              name: ram0
+            - address: 0x30000 # i guess
+              size: 0x2000
+              name: ram1
+            - address: 0x32000
+              size: 0x600
+              name: extra
+            - address: 0xf8000
+              size: 0x4000
+              name: icache-data
+        maskrom:
+            address: 0x110000
+            size: 0x8000
+        bus:
+            lsb:
+                address: 0x1e0000
+                size: 0x10000
+            hsb:
+                address: 0x1f0000
+                size: 0x10000
+            cpusfr:
+                address: 0x100000
+                size: 0x10000
+
+    uboot1.00:
+        quirks:
+            memory-rw-mengli-crypt: yes
+
 br28:
     name:
         - AC701N
     arch: pi32v2
+
+    uboot1.00:
+        quirks:
+            memory-rw-mengli-crypt: yes
 
 br30:
     name:
@@ -112,17 +357,29 @@ br30:
         - AC897N
     arch: pi32v2
 
+    uboot1.00:
+        quirks:
+            memory-rw-mengli-crypt: yes
+
 br34:
     name:
         - AC638N
         - AD698N
     arch: pi32v2
 
+    uboot1.00:
+        quirks:
+            memory-rw-mengli-crypt: yes
+
 br36:
     name:
         - AC700N
         - JL700N
     arch: pi32v2
+
+    uboot1.00:
+        quirks:
+            memory-rw-mengli-crypt: yes
 
 # -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- #
 
@@ -133,3 +390,7 @@ wl80:
 wl82:
     name:
         - AC791N
+
+    uboot1.00:
+        quirks:
+            memory-rw-mengli-crypt: yes
