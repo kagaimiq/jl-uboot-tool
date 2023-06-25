@@ -57,7 +57,7 @@ Erases a 64k block in the flash
 Writes data into flash or SD card
 
 - Command: `FB 01 AA:aa:aa:aa SS -- ss cc:CC`
-  * AA:aa:aa:aa = Address (for flash it's byte-based, for SD card it's sector-based)
+  * AA:aa:aa:aa = Address (byte-based both for flash and SD card)
   * SS -- ss = Size of data
   * cc:CC = CRC16 of data
 - Data in: Data to be written
@@ -143,6 +143,6 @@ Selects the SPI flash that will be used..
 Reads data from flash or SD card
 
 - Command: `FD 01 AA:aa:aa:aa SS -- ss`
-  * AA:aa:aa:aa = Address (for flash it's byte-based, for SD card it's sector-based)
+  * AA:aa:aa:aa = Address (byte-based both for flash and SD card)
   * SS -- ss = Size of data
 - Data out: Data that was read
