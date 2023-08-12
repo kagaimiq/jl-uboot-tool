@@ -60,38 +60,38 @@ This describes commands and their behavior specific to the br17loader (v204).
 
 ### Erase flash block (64k)
 
-- Command: `FB 00 AA:aa:aa:aa`
+- Command: `FB 00 AA:aa:aa:aa -- -- -- -- -- -- -- -- -- --`
   * AA:aa:aa:aa = Block address
 - Data out: `FB 00 SS -- -- -- -- -- -- -- -- -- -- -- -- --`
   * SS = result code
 
 ### Erase flash sector (4k)
 
-- Command: `FB 01 AA:aa:aa:aa`
+- Command: `FB 01 AA:aa:aa:aa -- -- -- -- -- -- -- -- -- --`
   * AA:aa:aa:aa = Sector address
 - Data out: `FB 01 -- -- -- -- -- -- -- -- -- -- -- -- -- --`
 
 ### Erase flash chip
 
-- Command: `FB 02 -- -- -- --`
+- Command: `FB 02 -- -- -- -- -- -- -- -- -- -- -- -- -- --`
 - Data out: `FB 02 -- -- -- -- -- -- -- -- -- -- -- -- -- --`
 
 ### Read status
 
-- Command: `FC 03 -- -- -- --`
+- Command: `FC 03 -- -- -- -- -- -- -- -- -- -- -- -- -- --`
 - Data out: `FC 03 SS -- -- -- -- -- -- -- -- -- -- -- -- --`
   * SS = Status code (always 0x00)
 
 ### Write flash
 
-- Command: `FB 04 AA:aa:aa:aa SS:ss`
+- Command: `FB 04 AA:aa:aa:aa SS:ss -- -- -- -- -- -- -- --`
   * AA:aa:aa:aa = Flash address
   * SS:ss = Data size
 - Data in: Data to write
 
 ### Read flash
 
-- Command: `FD 05 AA:aa:aa:aa SS:ss`
+- Command: `FD 05 AA:aa:aa:aa SS:ss -- -- -- -- -- -- -- --`
   * AA:aa:aa:aa = Flash address
   * SS:ss = Read size
 - Data out: Data read from flash
@@ -101,7 +101,7 @@ Executing the same command with a different 'address' argument also locks the ab
 
 ### Write memory
 
-- Command: `FB 06 AA:aa:aa:aa SS:ss cc:CC`
+- Command: `FB 06 AA:aa:aa:aa SS:ss -- cc:CC -- -- -- -- --`
   * AA:aa:aa:aa = Memory address
   * SS:ss = Data size
   * cc:CC = CRC16 of data
@@ -113,14 +113,14 @@ Seems like you can't write past 0x6000 or something like that...
 
 ### Read memory
 
-- Command: `FD 07 AA:aa:aa:aa SS:ss`
+- Command: `FD 07 AA:aa:aa:aa SS:ss -- -- -- -- -- -- -- --`
   * AA:aa:aa:aa = Memory address
   * SS:ss = Data size
 - Data out: Data read from memory
 
 ### Jump to memory
 
-- Command: `FB 08 AA:aa:aa:aa`
+- Command: `FB 08 AA:aa:aa:aa -- -- -- -- -- -- -- -- -- --`
   * AA:aa:aa:aa = Memory address
 - Data out: `FB 08 -- -- -- -- -- -- -- -- -- -- -- -- -- --`
 
@@ -130,7 +130,7 @@ and before calling code the timer is stopped and the interrupts are disabled.
 
 ### Read key
 
-- Command: `FC 09 AA:aa:aa:aa`
+- Command: `FC 09 AA:aa:aa:aa -- -- -- -- -- -- -- -- -- --`
   * AA:aa:aa:aa = 'address', should be 0xAC6900 to be able to read flash
 - Data out: `FC 09 -- -- -- -- KK:kk -- -- -- -- -- -- -- --`
   * KK:kk = chipkey
@@ -143,7 +143,7 @@ Similarly, executing this command with the 'address' set to something other than
 
 ### Get online device
 
-- Command: `FC 0A -- -- -- --`
+- Command: `FC 0A -- -- -- -- -- -- -- -- -- -- -- -- -- --`
 - Data out: `FC 0A TT -- ii:ii:ii:II -- -- -- -- -- -- -- --`
   * TT = Device type
     * 0x00 = None
@@ -155,13 +155,13 @@ Similarly, executing this command with the 'address' set to something other than
 
 ### Read ID
 
-- Command: `FC/FD 0B -- -- -- --`
+- Command: `FC/FD 0B -- -- -- -- -- -- -- -- -- -- -- -- --`
 - Data out: `FC 0B AA:aa:aa -- -- -- -- -- -- -- -- -- -- --`
   * AA:aa:aa = Device ID (bits 31..8 - so it lacks the third byte of the SPI flash's JEDEC ID)
 
 ### Run app
 
-- Command: `FC 0C AA:aa:aa:aa`
+- Command: `FC 0C AA:aa:aa:aa -- -- -- -- -- -- -- -- -- --`
   * AA:aa:aa:aa = address?
 - Data out: `-- -- -- -- -- -- -- -- -- -- -- -- -- -- -- --`
 
@@ -169,7 +169,7 @@ Similarly, executing this command with the 'address' set to something other than
 
 ### Set flash command
 
-- Command: `FC 0D -- -- -- -- SS:ss`
+- Command: `FC 0D -- -- -- -- SS:ss -- -- -- -- -- -- -- --`
   * SS:ss = data length (=8 bytes)
 - Data in: `aa bb cc dd ee ff gg hh`
   * aa = Chip erase command (e.g. 0xC7)
@@ -183,7 +183,7 @@ Similarly, executing this command with the 'address' set to something other than
 
 ### Flash CRC16 (special)
 
-- Command: `FC 0E AA:aa:aa:aa SS:ss`
+- Command: `FC 0E AA:aa:aa:aa SS:ss -- -- -- -- -- -- -- --`
   * AA:aa:aa:aa = Flash address
   * SS:ss = Size
 - Data out: `FC 0E CC:cc`
@@ -200,14 +200,14 @@ then the bytes 0x1fc-0x1ff is filled with byte at 0x1fb.
 
 **WARNING: BE CAREFUL, THIS OPERATION IS IRREVERSIBLE!**
 
-- Command: `FC 12 -- -- KK:kk`
+- Command: `FC 12 -- -- KK:kk -- -- -- -- -- -- -- -- -- --`
   * KK:kk = chipkey value
 - Data out: `FC 12 VV:vv:vv:vv`
   * VV:vv:vv:vv = result code (or written data)
 
 ### Flash CRC16
 
-- Command: `FC 13 AA:aa:aa:aa SS:ss`
+- Command: `FC 13 AA:aa:aa:aa SS:ss -- -- -- -- -- -- -- --`
   * AA:aa:aa:aa = Flash address
   * SS:ss = Size
 - Data out: `FC 13 CC:cc`
@@ -217,13 +217,13 @@ then the bytes 0x1fc-0x1ff is filled with byte at 0x1fb.
 
 ### Get USB buffer size
 
-- Command: `FC 14 -- -- -- --`
+- Command: `FC 14 -- -- -- -- -- -- -- -- -- -- -- -- -- --`
 - Data out: `FC 14 SS:ss:ss:ss`
   * SS:ss:ss:ss = USB buffer size (0x8000 / 32768 bytes)
 
 ### Get loader version
 
-- Command: `FC 15 -- -- -- --`
+- Command: `FC 15 -- -- -- -- -- -- -- -- -- -- -- -- -- --`
 - Data out: `FC 13 XX vv:vv:vv:VV`
   * *Yes, there IS mismatch in command codes!*
   * XX = 0x00

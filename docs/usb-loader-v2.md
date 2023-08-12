@@ -74,7 +74,7 @@ These are the differences between loaders and their protocol support.
 
 ### Get online device
 
-- Command: `FC 0A -- -- -- --`
+- Command: `FC 0A -- -- -- -- -- -- -- -- -- -- -- -- -- --`
 - Data out: `FC 0A AA -- bb:bb:bb:BB -- -- -- -- -- -- -- --`
   * AA = Device type:
     * 0x00 - no device

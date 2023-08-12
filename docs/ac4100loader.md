@@ -14,7 +14,7 @@ This describes commands and their behavior specific to ac4100loader
 - 0x01 = [Write flash](#write-flash)
 - 0x02 = [Erase flash chip](#erase-flash-chip)
 - 0x03 = [Erase flash sector](#erase-flash-sector)
-- 0x04 = [Memory Write](#memory-write)
+- 0x04 = [Write memory](#write-memory)
 - 0x05 = //
 - 0x06 = //
 - 0x07 = //
@@ -48,7 +48,7 @@ This describes commands and their behavior specific to ac4100loader
 
 Erases a 64k block in the flash
 
-- Command: `FB 00 AA:aa:aa:aa`
+- Command: `FB 00 AA:aa:aa:aa -- -- -- -- -- -- -- -- -- --`
   * AA:aa:aa:aa = Address of the block
 - Data out: `FB 00 -- -- -- -- -- -- -- -- -- -- -- -- -- --`
 
@@ -56,7 +56,7 @@ Erases a 64k block in the flash
 
 Writes data into flash or SD card
 
-- Command: `FB 01 AA:aa:aa:aa SS -- ss cc:CC`
+- Command: `FB 01 AA:aa:aa:aa SS -- ss cc:CC -- -- -- -- --`
   * AA:aa:aa:aa = Address (byte-based both for flash and SD card)
   * SS -- ss = Size of data
   * cc:CC = CRC16 of data
@@ -66,22 +66,22 @@ Writes data into flash or SD card
 
 Erases whole flash chip
 
-- Command: `FB 02 -- -- -- --`
+- Command: `FB 02 -- -- -- -- -- -- -- -- -- -- -- -- -- --`
 - Data out: `FB 02 -- -- -- -- -- -- -- -- -- -- -- -- -- --`
 
 ### Erase flash sector
 
 Erases a 4k sector in the flash
 
-- Command: `FB 03 AA:aa:aa:aa`
+- Command: `FB 03 AA:aa:aa:aa -- -- -- -- -- -- -- -- -- --`
   * AA:aa:aa:aa = Address of the sector
 - Data out: `FB 03 -- -- -- -- -- -- -- -- -- -- -- -- -- --`
 
-### Memory write
+### Write memory
 
 Simply receives data into the specified memory location
 
-- Command: `FB 04 AA:aa:aa:aa SS -- ss`
+- Command: `FB 04 AA:aa:aa:aa SS -- ss -- -- -- -- -- -- --`
   * AA:aa:aa:aa = Address
   * SS -- ss = Size of data
 - Data in: Data to be written
@@ -90,7 +90,9 @@ Simply receives data into the specified memory location
 
 ... does nothing??
 
-- Command: `FB 09 AA:aa:aa:aa BB -- bb`
+Seems like this was the memory jump command.
+
+- Command: `FB 09 AA:aa:aa:aa BB -- bb -- -- -- -- -- -- --`
   * AA:aa:aa:aa = something1 (address?)
   * BB -- bb = something2 (size?)
 - Data out: `FB 09 -- -- -- -- -- -- -- -- -- -- -- -- -- --`
@@ -99,13 +101,13 @@ Simply receives data into the specified memory location
 
 Reads the flash's JECEC ID (via command 0x9F, receives 3 bytes)
 
-- Command: `FC/FD 00 -- -- -- --`
+- Command: `FC/FD 00 -- -- -- -- -- -- -- -- -- -- -- -- -- --`
 - Data out: `FC 00 II:ii:ii -- -- -- -- -- -- -- -- -- --`
   * II:ii:ii = Flash JEDEC ID
 
 ### something2
 
-- Command: `FC 01/07 -- -- -- --`
+- Command: `FC 01/07 -- -- -- -- -- -- -- -- -- -- -- -- -- --`
 - Data out: `FC 01 AA -- -- -- -- -- -- -- -- -- -- -- -- --`
   * AA = var (always returns 0? that var is written to 0 before it gets sent...)
 
@@ -113,7 +115,7 @@ Reads the flash's JECEC ID (via command 0x9F, receives 3 bytes)
 
 Enables the watchdog timer
 
-- Command: `FC 02 TT -- -- --`
+- Command: `FC 02 TT -- -- -- -- -- -- -- -- -- -- -- -- --`
   * TT = timeout value (`WDT_CON = (timeout & 0xf) | 0x10;`)
 - Data out: ?? `FC 02 -- -- -- -- -- -- -- -- -- -- -- -- -- --`
 
@@ -121,7 +123,7 @@ Enables the watchdog timer
 
 Gets the device that is currently online (present)
 
-- Command: `FC 0B -- -- -- --`
+- Command: `FC 0B -- -- -- -- -- -- -- -- -- -- -- -- -- --`
 - Data out: `FC 0B DD -- -- -- -- -- -- -- -- -- -- -- -- --`
   * DD = Device type:
     * 0x00 - no device
@@ -132,7 +134,7 @@ Gets the device that is currently online (present)
 
 Selects the SPI flash that will be used..
 
-- Command: `FC 0C TT -- -- --`
+- Command: `FC 0C TT -- -- -- -- -- -- -- -- -- -- -- -- --`
   * TT = SPI flash type:
     * 0x00 = SPI_FLASH_CODE
     * 0x01 = SPI_FLASH_DATA
@@ -142,7 +144,7 @@ Selects the SPI flash that will be used..
 
 Reads data from flash or SD card
 
-- Command: `FD 01 AA:aa:aa:aa SS -- ss`
+- Command: `FD 01 AA:aa:aa:aa SS -- ss -- -- -- -- -- -- --`
   * AA:aa:aa:aa = Address (byte-based both for flash and SD card)
   * SS -- ss = Size of data
 - Data out: Data that was read

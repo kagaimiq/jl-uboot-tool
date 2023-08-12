@@ -6,6 +6,7 @@ to interact with the chip.
 ## General info
 
 The command block (CB) contains the opcode (e.g. 0xFB, 0xFC, 0xFD), the sub-opcode and zero or more argument bytes.
+isd_download, etc. always sends 16-byte command blocks, but actually they don't have to be exactly 16 bytes.
 
 As for the data, there is three possible variations:
 - Response packet
@@ -44,7 +45,7 @@ So to do anything else a loader binary needs to be loaded first.
 
 ### Write memory
 
-- Command: `FB 06 AA:aa:aa:aa SS:ss -- cc:CC`
+- Command: `FB 06 AA:aa:aa:aa SS:ss -- cc:CC -- -- -- -- --`
   * AA:aa:aa:aa = Memory address
   * SS:ss = Size of data
   * cc:CC = CRC16 of data
@@ -55,7 +56,7 @@ They do it via writing the raw data into the target memory address, and then dec
 
 ### Read memory
 
-- Command: `FD 07 AA:aa:aa:aa SS:ss`
+- Command: `FD 07 AA:aa:aa:aa SS:ss -- -- -- -- -- -- -- --`
   * AA:aa:aa:aa = Memory address
   * SS:ss = Size of data
 - Data out: data that was read
@@ -68,7 +69,7 @@ as well as the peripheral registers (it absolutely will mess up these!)
 
 ### Jump to memory
 
-- Command: `FB 08 AA:aa:aa:aa BB:bb`
+- Command: `FB 08 AA:aa:aa:aa BB:bb -- -- -- -- -- -- -- --`
   * AA:aa:aa:aa = Memory address
   * BB:bb = Argument
 
@@ -115,7 +116,7 @@ The argument field is understood by the vendor's loaders this way:
 
 **Note: (at least) DV15-specific**
 
-- Command: `FB 31 AA:aa:aa:aa SS:ss -- cc:CC`
+- Command: `FB 31 AA:aa:aa:aa SS:ss -- cc:CC -- -- -- -- --`
   * AA:aa:aa:aa = Memory address
   * SS:ss = Size of data
   * cc:CC = CRC16 of data
