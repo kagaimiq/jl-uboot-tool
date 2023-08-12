@@ -17,7 +17,7 @@ D+ | _-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_- ...
 Here, the D- line is the data and D+ line is the clock.
 The data is sent MSB-first and sampled by the clock's rising edge.
 
-This key is sent continuously until the dongle acknowledges it by pulling both D+ and D- to ground for at least 2ms:
+This key is sent continuously until the chip acknowledges it by pulling both D+ and D- to ground for at least 2ms:
 
 ```
 D- | ______--__----__------__--------______________________________________--
@@ -37,7 +37,7 @@ For example, chips like BR23 or BR25 really doesn't like to have USB connected t
 respond to any USB control packets and the chip will just reboot likely by being reset by the watchdog because of a crash or something like that.
 
 On other hand, chips like BR17 or BR21 does not have these strict requirements on the USB connection - you can connect the USB to the chip
-whenever you want, until the chip gets reset by the watchdog after ~4 seconds likely because of the USB detection code having a busy loop
+whenever you want, until the chip gets reset by the watchdog after ~4 seconds likely because of the USB SOF detection code having a busy loop
 without feeding the watchdog. But anyway, here the situation is not so strict as in BR23/BR25 case.
 
 At least I can suggest connecting the USB to the chip as quickly as possible, as well as using robust USB switching method,
