@@ -1,14 +1,17 @@
 from jl_stuff import *
-from jl_uboot import JL_UBOOT
+from jl_uboot import JL_MSCDevice, JL_UBOOT
 import argparse
 
 ap = argparse.ArgumentParser(description='Load code into memory and execute it')
 
+def anyint(s):
+    return int(s, 0)
+
 ap.add_argument('--device',
                 help='Path to the JieLi disk (e.g. /dev/sg2 or \\\\.\\E:)')
 
-ap.add_argument('--arg', default='0x4777',
-                help="Numerical argument that's passed to the code (default: %(default)s)")
+ap.add_argument('--arg', type=anyint, default=0x4777,
+                help="Numerical argument that's passed to the code (default: 0x%(default)04x)")
 
 ap.add_argument('--encrypt', action='store_true',
                 help="Encrypt the data as it goes into the chip, usually used for chips that"
@@ -19,7 +22,7 @@ ap.add_argument('--block-size', default='512', metavar='SIZE',
                 help="Size of the block that is used when transferring data to the chip. (default = %(default)s)"
                      " Please keep in mind that the encrypted loaders usually use a block size of 512 bytes. ")
 
-ap.add_argument('address',
+ap.add_argument('address', type=anyint,
                 help="Address where the file will be loaded and executed from")
 
 ap.add_argument('file',
@@ -37,9 +40,12 @@ else:
     if device is None:
         exit(1)
 
-with JL_UBOOT(device) as dev:
+with JL_MSCDevice(device) as dev:
+    # TODO, determine whether we are in UBOOT1.00 or Loader/UBOOT2.00 modes
+    uboot = JL_UBOOT(dev)
+
     with open(args.file, 'rb') as f:
-        addr = int(args.address, 0)
+        addr = args.address
 
         while True:
             block = f.read(int(args.block_size, 0))
@@ -48,7 +54,7 @@ with JL_UBOOT(device) as dev:
             if args.encrypt:
                 block = jl_crypt_mengli(block)
 
-            dev.mem_write(addr, block)
+            uboot.mem_write(addr, block)
             addr += len(block)
 
-        dev.mem_jump(int(args.address, 0), int(args.arg, 0))
+        uboot.mem_jump(args.address, args.arg)

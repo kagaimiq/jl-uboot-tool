@@ -1,5 +1,6 @@
 from jl_stuff import *
-from jl_uboot import JL_UBOOT, JL_Loader, SCSIException
+from jl_uboot import JL_MSCDevice, JL_UBOOT, JL_Loader
+from scsiio.common import SCSIException
 import argparse, cmd, time
 import pathlib, yaml
 
@@ -357,7 +358,7 @@ class DasShell(cmd.Cmd):
 
             ratio = dlength / (dlength + length)
             print("\rErasing %08x [%s] %3d%%" % (address, makebar(ratio, 40), ratio * 100), end='')
-            print(" %.2f KB/s" % (block / 1000 / t), end='', flush=True)
+            print(" %.2f KB/s" % ((block / 1000 / t) if t > 0 else 0), end='', flush=True)
 
             address += n
 
@@ -380,7 +381,7 @@ class DasShell(cmd.Cmd):
 
             ratio = dlength / (dlength + length)
             print("\rWriting %08x [%s] %3d%%" % (address, makebar(ratio, 40), ratio * 100), end='')
-            print(" %.2f KB/s" % (len(block) / 1000 / t), end='', flush=True)
+            print(" %.2f KB/s" % ((len(block) / 1000 / t) if t > 0 else 0), end='', flush=True)
 
             address += n
 
@@ -403,7 +404,7 @@ class DasShell(cmd.Cmd):
 
             ratio = dlength / (dlength + length)
             print("\rReading %08x [%s] %3d%%" % (address, makebar(ratio, 40), ratio * 100), end='')
-            print(" %.2f KB/s" % (len(data) / 1000 / t), end='', flush=True)
+            print(" %.2f KB/s" % ((len(data) / 1000 / t) if t > 0 else 0), end='', flush=True)
 
             address += n
 
@@ -484,6 +485,15 @@ class DasShell(cmd.Cmd):
             self.flash_write_file(address, length, fil)
 
     #-------------------------------------
+
+    def do_erasechip(self, args):
+        """Erase whole flash.
+        erasechip
+
+        Warning: may not always work!
+        """
+
+        self.dev.flash_erase_chip()
 
     def do_erase(self, args):
         """Erase flash.
@@ -612,7 +622,7 @@ class DasShell(cmd.Cmd):
 
                 ratio = dlength / (dlength + length)
                 print("\rReading %08x [%s] %3d%%" % (address, makebar(ratio, 40), ratio * 100), end='')
-                print(" %.2f KB/s" % (len(data) / 1000 / t), end='', flush=True)
+                print(" %.2f KB/s" % ((len(data) / 1000 / t) if t > 0 else 0), end='', flush=True)
 
                 address += n
 
@@ -665,7 +675,7 @@ class DasShell(cmd.Cmd):
 
                 ratio = dlength / (dlength + length)
                 print("\rWriting %08x [%s] %3d%%" % (address, makebar(ratio, 40), ratio * 100), end='')
-                print(" %.2f KB/s" % (len(block) / 1000 / t), end='', flush=True)
+                print(" %.2f kB/s" % ((len(block) / 1000 / t) if t > 0 else 0), end='', flush=True)
 
                 address += n
 
@@ -747,7 +757,7 @@ else:
     if device is None:
         exit(1)
 
-with JL_UBOOT(device) as dev:
+with JL_MSCDevice(device) as dev:
     vendor, product, prodrev = dev.inquiry()
 
     chipname = vendor.lower()
@@ -759,6 +769,8 @@ with JL_UBOOT(device) as dev:
     print('Chip: %s (%s)' % (chipname.upper(), ', '.join(chipspec['name'])))
 
     #print_largeletters(chipname)
+
+    uboot = JL_UBOOT(dev)
 
     runtheloader = False
 
@@ -819,6 +831,18 @@ with JL_UBOOT(device) as dev:
         with open(loaderroot/loaderspec['file'], 'rb') as f:
             blocksz = loaderspec.get('blocksize', 512)
 
+            ldrcrypt = loaderspec.get('encryption')
+
+            menglicrypt = False
+
+            # does this chip's UBOOT1.00 accept data in mengli encrypted form?
+            if 'uboot1.00' in chipspec:
+                if 'quirks' in chipspec['uboot1.00']:
+                    menglicrypt = chipspec['uboot1.00']['quirks'].get('memory-rw-mengli-crypt') == True
+
+            # shall we ever perform the mengli de/encryption?
+            menglicrypt = (not menglicrypt and ldrcrypt == 'MengLi') or (menglicrypt and ldrcrypt != 'MengLi')
+
             #
             # Write
             #
@@ -827,7 +851,15 @@ with JL_UBOOT(device) as dev:
                 block = f.read(blocksz)
                 if block == b'': break
 
-                dev.mem_write(addr, block)
+                if ldrcrypt == 'RxGp':
+                    # just pass it into the dedicated memory write command
+                    uboot.mem_write_rxgp(addr, block)
+
+                else:
+                    if menglicrypt:
+                        block = jl_crypt_mengli(block)
+
+                    uboot.mem_write(addr, block)
 
                 addr += len(block)
 
@@ -841,7 +873,15 @@ with JL_UBOOT(device) as dev:
                 block = f.read(blocksz)
                 if block == b'': break
 
-                rblock = dev.mem_read(addr, len(block))
+                if ldrcrypt == 'RxGp':
+                    # Decrypt this block in order to check it with an ordinary memory read command
+                    block = jl_crypt_rxgp(block)
+
+                elif menglicrypt:
+                    # if it is mengli encrypted or the mem_read returns it this way, then de/encrypt it.
+                    block = jl_crypt_mengli(block)
+
+                rblock = uboot.mem_read(addr, len(block))
                 if block != rblock:
                     print('Mismatch at %08x!' % addr)
                     break
@@ -862,7 +902,7 @@ with JL_UBOOT(device) as dev:
         print("Running loader (loaded to 0x%(address)04x) on 0x%(entry)04x, with argument 0x%(argument)04x..." % loaderspec)
 
         try:
-            dev.mem_jump(loaderspec['entry'], loaderspec['argument'])
+            uboot.mem_jump(loaderspec['entry'], loaderspec['argument'])
             print("Loader runs successfully.")
         except SCSIException:
             print("Failed to run loader.")

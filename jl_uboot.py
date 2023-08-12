@@ -3,7 +3,153 @@ from scsiio.common import SCSIException
 from jl_stuff import *
 import os, time
 
+class JL_MSCDevice:
+    """ Class for handling of the JieLi Mass Storage devices """
 
+    def __init__(self, path):
+        self.path = path
+        self.open()
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, etype, evalue, trace):
+        self.close()
+
+    #-------------------------------------------#
+
+    def open(self):
+        print("Waiting for [%s]" % self.path, end='', flush=True)
+
+        while True:
+            # try to open the device *right now*, if we fail for whatever reason,
+            # we try again (should probably only ignore the 'file not found' and 'permission denied' stuff)
+            try:
+                self.dev = SCSIDev(self.path)
+            except:
+                print('.', end='', flush=True)
+                time.sleep(.5)
+                continue
+
+            print(" try!", end='', flush=True)
+
+            # try to get inquiry data
+            try:
+                vendor, product, prodrev = self.inquiry()
+            except SCSIException:
+                print(" fail!", end='', flush=True)
+                self.dev.close()
+                time.sleep(.5)
+                continue
+
+            # if it's an UBOOT device then we'll proceed
+            if product.startswith('UBOOT'):
+                print(" ok (%s %s %s)" % (vendor, product, prodrev))
+                break
+
+            # otherwise try to enter this mode...
+            # product.startswith(('UDISK','DEVICE'))
+            else:
+                ldr = JL_Loader(self.dev)
+
+                try:
+                    ldr.online_device() # any command will suffice
+                except SCSIException:
+                    pass
+
+            self.dev.close()
+            time.sleep(.5)
+
+    def close(self):
+        self.dev.close()
+
+    #-------------------------------------------#
+
+    def inquiry(self):
+        data = bytearray(36)
+        self.dev.execute(b'\x12' + b'\x00\x00' + len(data).to_bytes(2, 'big')
+                                               + b'\x00', None, data)
+
+        return (
+            str(data[8:16], 'ascii').strip(),
+            str(data[16:32], 'ascii').strip(),
+            str(data[32:36], 'ascii').strip()
+        )
+
+    def cmd_prepare_cdb(self, cmd, args):
+        cdb = cmd.to_bytes(2, 'big') + args
+
+        # if the cdb length is less than 16, then we'll just fill with 0xff's
+        if len(cdb) < 16:
+            cdb += b'\xff' * (16 - len(cdb))
+
+        #print('!! CDB PREPARE !!', '[%04x]' % cmd, '+', '{'+args.hex('.')+'}', '=', '{'+cdb.hex('.')+'}')
+
+        return cdb
+
+    def cmd_exec(self, cmd, args, check_response=True):
+        resp = bytearray(16)
+        self.dev.execute(self.cmd_prepare_cdb(cmd, args), None, resp)
+
+        rcmd = int.from_bytes(resp[:2], 'big')
+        resp = bytes(resp[2:])
+
+        #print('!! RESPONSE !!', '[%04x]' % rcmd, '+', '{'+resp.hex('.')+'}')
+
+        if check_response:
+            # Check if the command in response matched the sent one
+            assert(cmd == rcmd)
+            return resp
+        else:
+            # Return raw-ish response
+            return (rcmd, resp)
+
+    def cmd_exec_datain(self, cmd, args, dlen):
+        data = bytearray(dlen)
+        self.dev.execute(self.cmd_prepare_cdb(cmd, args), None, data)
+        return bytes(data)
+
+    def cmd_exec_dataout(self, cmd, args, data):
+        self.dev.execute(self.cmd_prepare_cdb(cmd, args), data, None)
+
+###############################################################################################################
+
+class JL_UBOOT:
+    """
+    UBOOT1.00 class implementation for all (or most?) UBOOT1.00 variants.
+    """
+
+    CMD_WRITE_MEMORY                = 0xFB06
+    CMD_READ_MEMORY                 = 0xFD07
+    CMD_JUMP_TO_MEMORY              = 0xFB08
+    CMD_WRITE_MEMORY_RXGP           = 0xFB31
+
+    def __init__(self, dev):
+        self.dev = dev
+
+    #-------------------------------------------#
+
+    def mem_write(self, addr, data):
+        """ Write memory """
+        self.dev.cmd_exec_dataout(JL_UBOOT.CMD_WRITE_MEMORY,
+                addr.to_bytes(4, 'big') + len(data).to_bytes(2, 'big')
+                    + b'\x00' + jl_crc16(data).to_bytes(2, 'little'), data)
+
+    def mem_read(self, addr, len):
+        """ Read memory """
+        return self.dev.cmd_exec_datain(JL_UBOOT.CMD_READ_MEMORY,
+                addr.to_bytes(4, 'big') + len.to_bytes(2, 'big'), len)
+
+    def mem_jump(self, addr, arg):
+        """ Jump to memory (with argument) """
+        self.dev.cmd_exec(JL_UBOOT.CMD_JUMP_TO_MEMORY,
+                    addr.to_bytes(4, 'big') + arg.to_bytes(2, 'big'))
+
+    def mem_write_rxgp(self, addr, data):
+        """ Write memory (RxGp-encrypted payload, probably DVxx or DV15 specific) """
+        self.dev.cmd_exec_dataout(JL_UBOOT.CMD_WRITE_MEMORY_RXGP,
+                addr.to_bytes(4, 'big') + len(data).to_bytes(2, 'big')
+                    + b'\x00' + jl_crc16(data).to_bytes(2, 'little'), data)
 
 class JL_Loader:
     """
@@ -77,10 +223,10 @@ class JL_Loader:
         return self.dev.cmd_exec_datain(JL_Loader.CMD_READ_MEMORY,
                 addr.to_bytes(4, 'big') + len.to_bytes(2, 'big'), len)
 
-    def mem_jump(self, addr, arg):
+    def mem_jump(self, addr):
         """ Jump to memory """
         self.dev.cmd_exec(JL_Loader.CMD_JUMP_TO_MEMORY,
-                    addr.to_bytes(4, 'big') + arg.to_bytes(2, 'big'))
+                    addr.to_bytes(4, 'big'))
 
     def chip_key(self, arg=0xac6900):
         """ Read (chip)key """
@@ -150,130 +296,4 @@ class JL_Loader:
         """ Get MaskROM ID """
         resp = self.dev.cmd_exec(JL_Loader.CMD_GET_MASKROM_ID, b'')
         return int.from_bytes(resp[:4], 'big')
-
-
-
-class JL_UBOOT:
-    def __init__(self, path):
-        self.path = path
-        self.open()
-
-    def __enter__(self):
-        return self
-
-    def __exit__(self, etype, evalue, trace):
-        self.close()
-
-    #-------------------------------------------#
-
-    def open(self):
-        print("Waiting for [%s]" % self.path, end='', flush=True)
-
-        while True:
-            # try to open the device *right now*, if we fail for whatever reason,
-            # we try again (should probably only ignore the 'file not found' and 'permission denied' stuff)
-            try:
-                self.dev = SCSIDev(self.path)
-            except:
-                print('.', end='', flush=True)
-                time.sleep(.5)
-                continue
-
-            print(" try!", end='', flush=True)
-
-            # try to get inquiry data
-            try:
-                vendor, product, prodrev = self.inquiry()
-            except SCSIException:
-                print(" fail!", end='', flush=True)
-                self.dev.close()
-                time.sleep(.5)
-                continue
-
-            # if it's an UBOOT device then we'll proceed
-            if product.startswith('UBOOT'):
-                print(" ok (%s %s %s)" % (vendor, product, prodrev))
-                break
-
-            # otherwise try to enter this mode...
-            # product.startswith(('UDISK','DEVICE'))
-            else:
-                try:
-                    self.reset() # any command will suffice
-                except SCSIException:
-                    pass
-
-            self.dev.close()
-            time.sleep(.5)
-
-    def close(self):
-        self.dev.close()
-
-    #-------------------------------------------#
-
-    def inquiry(self):
-        data = bytearray(36)
-        self.dev.execute(b'\x12' + b'\x00\x00' + len(data).to_bytes(2, 'big')
-                                               + b'\x00', None, data)
-
-        return (
-            str(data[8:16], 'ascii').strip(),
-            str(data[16:32], 'ascii').strip(),
-            str(data[32:36], 'ascii').strip()
-        )
-
-    def cmd_prepare_cdb(self, cmd, args):
-        cdb = cmd.to_bytes(2, 'big') + args
-
-        # if the cdb length is less than 16, then we'll just fill with 0xff's
-        if len(cdb) < 16:
-            cdb += b'\xff' * (16 - len(cdb))
-
-        #print('!! CDB PREPARE !!', '[%04x]' % cmd, '+', '{'+args.hex('.')+'}', '=', '{'+cdb.hex('.')+'}')
-
-        return cdb
-
-    def cmd_exec(self, cmd, args, check_response=True):
-        resp = bytearray(16)
-        self.dev.execute(self.cmd_prepare_cdb(cmd, args), None, resp)
-
-        rcmd = int.from_bytes(resp[:2], 'big')
-        resp = bytes(resp[2:])
-
-        #print('!! RESPONSE !!', '[%04x]' % rcmd, '+', '{'+resp.hex('.')+'}')
-
-        if check_response:
-            # Check if the command in response matched the sent one
-            assert(cmd == rcmd)
-            return resp
-        else:
-            # Return raw-ish response
-            return (rcmd, resp)
-
-    def cmd_exec_datain(self, cmd, args, dlen):
-        data = bytearray(dlen)
-        self.dev.execute(self.cmd_prepare_cdb(cmd, args), None, data)
-        return bytes(data)
-
-    def cmd_exec_dataout(self, cmd, args, data):
-        self.dev.execute(self.cmd_prepare_cdb(cmd, args), data, None)
-
-    #-------------------------------------------#
-
-    #
-    # TODO, get rid of these
-    #
-
-    def mem_write(self, addr, data):
-        self.cmd_exec_dataout(JL_Loader.CMD_WRITE_MEMORY,
-                addr.to_bytes(4, 'big') + len(data).to_bytes(2, 'big')
-                    + b'\x00' + jl_crc16(data).to_bytes(2, 'little'), data)
-
-    def mem_read(self, addr, len):
-        return self.cmd_exec_datain(JL_Loader.CMD_READ_MEMORY,
-                addr.to_bytes(4, 'big') + len.to_bytes(2, 'big'), len)
-
-    def mem_jump(self, addr, arg):
-        self.cmd_exec(JL_Loader.CMD_JUMP_TO_MEMORY,
-                    addr.to_bytes(4, 'big') + arg.to_bytes(2, 'big'))
 
