@@ -1,6 +1,6 @@
 # USB loaders definition
 
-ac4100:
+cd03:
     file: loaderblobs/usb/ac4100loader.bin
     address: 0x9000
 

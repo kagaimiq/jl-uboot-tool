@@ -1,6 +1,6 @@
 # Chips definition
 
-ac4100: # CD03 or CD003
+cd03:
     name:
         - AC410N
     arch: or1k
@@ -94,7 +94,7 @@ dv15:
 
     uboot1.00:
         quirks:
-            rxgp-crypt-mem-write-cmd: yes     # maybe indicate it a different way
+            rxgp-crypt-mem-write-cmd: yes     # maybe indicate it in a different way
 
 dv16:
     name:
