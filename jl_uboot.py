@@ -13,13 +13,15 @@ class JL_MSCDevice:
     def __enter__(self):
         return self
 
-    def __exit__(self, etype, evalue, trace):
+    def __exit__(self, *args, **kvargs):
         self.close()
 
     #-------------------------------------------#
 
     def open(self):
         print("Waiting for [%s]" % self.path, end='', flush=True)
+
+        # TODO: proper handling for non-UBOOT devices!
 
         while True:
             # try to open the device *right now*, if we fail for whatever reason,
@@ -50,10 +52,10 @@ class JL_MSCDevice:
             # otherwise try to enter this mode...
             # product.startswith(('UDISK','DEVICE'))
             else:
-                ldr = JL_Loader(self.dev)
+                ldr = JL_Loader(self)
 
                 try:
-                    ldr.online_device() # any command will suffice
+                    ldr.run_app() # any command will suffice
                 except SCSIException:
                     pass
 
@@ -119,10 +121,15 @@ class JL_UBOOT:
     UBOOT1.00 class implementation for all (or most?) UBOOT1.00 variants.
     """
 
+    #
+    # Commands
+    #
     CMD_WRITE_MEMORY                = 0xFB06
     CMD_READ_MEMORY                 = 0xFD07
     CMD_JUMP_TO_MEMORY              = 0xFB08
     CMD_WRITE_MEMORY_RXGP           = 0xFB31
+
+    #-------------------------------------------#
 
     def __init__(self, dev):
         self.dev = dev
@@ -157,6 +164,9 @@ class JL_Loader:
     (excluding AC4100 loader, which has different command set)
     """
 
+    #
+    # Commands
+    #
     CMD_ERASE_FLASH_BLOCK           = 0xFB00
     CMD_ERASE_FLASH_SECTOR          = 0xFB01
     CMD_ERASE_FLASH_CHIP            = 0xFB02
@@ -167,7 +177,7 @@ class JL_Loader:
     CMD_READ_MEMORY                 = 0xFD07
     CMD_JUMP_TO_MEMORY              = 0xFB08
     CMD_READ_KEY                    = 0xFC09
-    CMD_GET_ONLINE_DEV              = 0xFC0A
+    CMD_GET_ONLINE_DEVICE           = 0xFC0A
     CMD_READ_ID                     = 0xFC0B
     CMD_RUN_APP                     = 0xFC0C
     CMD_SET_FLASH_CMD               = 0xFC0D
@@ -177,6 +187,8 @@ class JL_Loader:
     CMD_GET_USB_BUFF_SIZE           = 0xFC14
     CMD_GET_LOADER_VER              = 0xFC15
     CMD_GET_MASKROM_ID              = 0xFC16
+
+    #-------------------------------------------#
 
     def __init__(self, dev):
         self.dev = dev
@@ -235,7 +247,7 @@ class JL_Loader:
 
     def online_device(self):
         """ Get online device """
-        resp = self.dev.cmd_exec(JL_Loader.CMD_GET_ONLINE_DEV, b'')
+        resp = self.dev.cmd_exec(JL_Loader.CMD_GET_ONLINE_DEVICE, b'')
         return {'type': resp[0], 'id': int.from_bytes(resp[2:6], 'little')}
 
     def read_id(self):
