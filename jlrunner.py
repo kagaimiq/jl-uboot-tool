@@ -42,7 +42,7 @@ else:
 
 with JL_MSCDevice(device) as dev:
     # TODO, determine whether we are in UBOOT1.00 or Loader/UBOOT2.00 modes
-    uboot = JL_UBOOT(dev)
+    uboot = JL_UBOOT(dev.dev)
 
     with open(args.file, 'rb') as f:
         addr = args.address

@@ -52,7 +52,7 @@ class JL_MSCDevice:
             # otherwise try to enter this mode...
             # product.startswith(('UDISK','DEVICE'))
             else:
-                ldr = JL_Loader(self)
+                ldr = JL_LoaderV2(self)
 
                 try:
                     ldr.run_app() # any command will suffice
@@ -68,6 +68,8 @@ class JL_MSCDevice:
     #-------------------------------------------#
 
     def inquiry(self):
+        """ Send an Inquiry request and return manufacturer, product and revision strings """
+
         data = bytearray(36)
         self.dev.execute(b'\x12' + b'\x00\x00' + len(data).to_bytes(2, 'big')
                                                + b'\x00', None, data)
@@ -78,7 +80,18 @@ class JL_MSCDevice:
             str(data[32:36], 'ascii').strip()
         )
 
+###############################################################################################################
+
+class JL_MSCProtocolBase:
+    """
+    Common stuff for the USB Mass Storage Class-based protocols
+    """
+
+    def __init__(self, dev):
+        self.dev = dev
+
     def cmd_prepare_cdb(self, cmd, args):
+        """ Prepare command's CDB """
         cdb = cmd.to_bytes(2, 'big') + args
 
         # if the cdb length is less than 16, then we'll just fill with 0xff's
@@ -90,6 +103,7 @@ class JL_MSCDevice:
         return cdb
 
     def cmd_exec(self, cmd, args, check_response=True):
+        """ Execute command - no data (response is received instead) """
         resp = bytearray(16)
         self.dev.execute(self.cmd_prepare_cdb(cmd, args), None, resp)
 
@@ -107,16 +121,17 @@ class JL_MSCDevice:
             return (rcmd, resp)
 
     def cmd_exec_datain(self, cmd, args, dlen):
+        """ Execute command - data in (receive from device) """
         data = bytearray(dlen)
         self.dev.execute(self.cmd_prepare_cdb(cmd, args), None, data)
         return bytes(data)
 
     def cmd_exec_dataout(self, cmd, args, data):
+        """ Execute command - data out (send to device) """
         self.dev.execute(self.cmd_prepare_cdb(cmd, args), data, None)
 
-###############################################################################################################
 
-class JL_UBOOT:
+class JL_UBOOT(JL_MSCProtocolBase):
     """
     UBOOT1.00 class implementation for all (or most?) UBOOT1.00 variants.
     """
@@ -131,37 +146,31 @@ class JL_UBOOT:
 
     #-------------------------------------------#
 
-    def __init__(self, dev):
-        self.dev = dev
-
-    #-------------------------------------------#
-
     def mem_write(self, addr, data):
         """ Write memory """
-        self.dev.cmd_exec_dataout(JL_UBOOT.CMD_WRITE_MEMORY,
+        self.cmd_exec_dataout(JL_UBOOT.CMD_WRITE_MEMORY,
                 addr.to_bytes(4, 'big') + len(data).to_bytes(2, 'big')
                     + b'\x00' + jl_crc16(data).to_bytes(2, 'little'), data)
 
     def mem_read(self, addr, len):
         """ Read memory """
-        return self.dev.cmd_exec_datain(JL_UBOOT.CMD_READ_MEMORY,
+        return self.cmd_exec_datain(JL_UBOOT.CMD_READ_MEMORY,
                 addr.to_bytes(4, 'big') + len.to_bytes(2, 'big'), len)
 
     def mem_jump(self, addr, arg):
         """ Jump to memory (with argument) """
-        self.dev.cmd_exec(JL_UBOOT.CMD_JUMP_TO_MEMORY,
+        self.cmd_exec(JL_UBOOT.CMD_JUMP_TO_MEMORY,
                     addr.to_bytes(4, 'big') + arg.to_bytes(2, 'big'))
 
     def mem_write_rxgp(self, addr, data):
         """ Write memory (RxGp-encrypted payload, probably DVxx or DV15 specific) """
-        self.dev.cmd_exec_dataout(JL_UBOOT.CMD_WRITE_MEMORY_RXGP,
+        self.cmd_exec_dataout(JL_UBOOT.CMD_WRITE_MEMORY_RXGP,
                 addr.to_bytes(4, 'big') + len(data).to_bytes(2, 'big')
                     + b'\x00' + jl_crc16(data).to_bytes(2, 'little'), data)
 
-class JL_Loader:
+class JL_LoaderV2(JL_MSCProtocolBase):
     """
     Loader class implementation for most loaders.
-    (excluding AC4100 loader, which has different command set)
     """
 
     #
@@ -190,78 +199,72 @@ class JL_Loader:
 
     #-------------------------------------------#
 
-    def __init__(self, dev):
-        self.dev = dev
-
-    #-------------------------------------------#
-
     def flash_erase_block(self, addr):
         """ Erase flash block (64k) """
-        resp = self.dev.cmd_exec(JL_Loader.CMD_ERASE_FLASH_BLOCK,
+        resp = self.cmd_exec(JL_LoaderV2.CMD_ERASE_FLASH_BLOCK,
                             addr.to_bytes(4, 'big'))
 
     def flash_erase_sector(self, addr):
         """ Erase flash sector (4k) """
-        resp = self.dev.cmd_exec(JL_Loader.CMD_ERASE_FLASH_SECTOR,
+        resp = self.cmd_exec(JL_LoaderV2.CMD_ERASE_FLASH_SECTOR,
                             addr.to_bytes(4, 'big'))
 
     def flash_erase_chip(self):
         """ Erase flash chip """
-        resp = self.dev.cmd_exec(JL_Loader.CMD_ERASE_FLASH_CHIP, b'')
+        resp = self.cmd_exec(JL_LoaderV2.CMD_ERASE_FLASH_CHIP, b'')
 
     def read_status(self):
         """ Read status """
-        resp = self.dev.cmd_exec(JL_Loader.CMD_READ_STATUS, b'')
+        resp = self.cmd_exec(JL_LoaderV2.CMD_READ_STATUS, b'')
         return resp[0]
 
     def flash_write(self, addr, data):
         """ Write flash """
-        self.dev.cmd_exec_dataout(JL_Loader.CMD_WRITE_FLASH,
+        self.cmd_exec_dataout(JL_LoaderV2.CMD_WRITE_FLASH,
                 addr.to_bytes(4, 'big') + len(data).to_bytes(2, 'big'), data)
 
     def flash_read(self, addr, len):
         """ Read flash """
-        return self.dev.cmd_exec_datain(JL_Loader.CMD_READ_FLASH,
+        return self.cmd_exec_datain(JL_LoaderV2.CMD_READ_FLASH,
                 addr.to_bytes(4, 'big') + len.to_bytes(2, 'big'), len)
 
     def mem_write(self, addr, data):
         """ Write memory """
-        self.dev.cmd_exec_dataout(JL_Loader.CMD_WRITE_MEMORY,
+        self.cmd_exec_dataout(JL_LoaderV2.CMD_WRITE_MEMORY,
                 addr.to_bytes(4, 'big') + len(data).to_bytes(2, 'big')
                     + b'\x00' + jl_crc16(data).to_bytes(2, 'little'), data)
 
     def mem_read(self, addr, len):
         """ Read memory """
-        return self.dev.cmd_exec_datain(JL_Loader.CMD_READ_MEMORY,
+        return self.cmd_exec_datain(JL_LoaderV2.CMD_READ_MEMORY,
                 addr.to_bytes(4, 'big') + len.to_bytes(2, 'big'), len)
 
-    def mem_jump(self, addr):
+    def mem_jump(self, addr, arg=0):
         """ Jump to memory """
-        self.dev.cmd_exec(JL_Loader.CMD_JUMP_TO_MEMORY,
-                    addr.to_bytes(4, 'big'))
+        self.cmd_exec(JL_LoaderV2.CMD_JUMP_TO_MEMORY,
+                    addr.to_bytes(4, 'big') + arg.to_bytes(2, 'big'))
 
     def chip_key(self, arg=0xac6900):
         """ Read (chip)key """
-        resp = self.dev.cmd_exec(JL_Loader.CMD_READ_KEY, arg.to_bytes(4, 'big'))
+        resp = self.cmd_exec(JL_LoaderV2.CMD_READ_KEY, arg.to_bytes(4, 'big'))
         return int.from_bytes(jl_crypt_mengli(resp[4:6][::-1]), 'little')
 
     def online_device(self):
         """ Get online device """
-        resp = self.dev.cmd_exec(JL_Loader.CMD_GET_ONLINE_DEVICE, b'')
+        resp = self.cmd_exec(JL_LoaderV2.CMD_GET_ONLINE_DEVICE, b'')
         return {'type': resp[0], 'id': int.from_bytes(resp[2:6], 'little')}
 
     def read_id(self):
         """ Read ID """
-        resp = self.dev.cmd_exec(JL_Loader.CMD_READ_ID, b'')
+        resp = self.cmd_exec(JL_LoaderV2.CMD_READ_ID, b'')
         return int.from_bytes(resp[0:3], 'big')
 
     def run_app(self, arg=1):
         """ Run app (or reset) """
-        self.dev.cmd_exec(JL_Loader.CMD_RUN_APP, arg.to_bytes(4, 'big'))
+        self.cmd_exec(JL_LoaderV2.CMD_RUN_APP, arg.to_bytes(4, 'big'))
 
     def set_flash_cmds(self, cmds):
-        """ Set flash commands
-        cmds:
+        """ Set flash commands, cmds in order:
             [0] = Chip erase command               (e.g. 0xC7)
             [1] = Block erase command              (e.g. 0xD8)
             [2] = Sector erase command             (e.g. 0x20)
@@ -272,40 +275,40 @@ class JL_Loader:
             [7] = Write status register command    (e.g. 0x01)
         """
 
-        self.dev.cmd_exec_datain(JL_Loader.CMD_SET_FLASH_CMD,
+        self.cmd_exec_datain(JL_LoaderV2.CMD_SET_FLASH_CMD,
             b'\x00\x00\x00\x00' + len(cmds).to_bytes(2, 'big'), bytes(cmds))
 
     def flash_crc16(self, addr, len):
         """ Calculate flash CRC16 (special) """
-        resp = self.dev.cmd_exec(JL_Loader.CMD_FLASH_CRC16,
+        resp = self.cmd_exec(JL_LoaderV2.CMD_FLASH_CRC16,
                         addr.to_bytes(4, 'big') + len.to_bytes(2, 'big'))
         return int.from_bytes(resp[:2], 'big')
 
     def write_chipkey(self, key):
         """ Write (chip)key """
-        resp = self.dev.cmd_exec(JL_Loader.CMD_WRITE_KEY,
+        resp = self.cmd_exec(JL_LoaderV2.CMD_WRITE_KEY,
                                                 key.to_bytes(4, 'big'))
         return int.from_bytes(resp[:4], 'big')
 
     def flash_crc16_raw(self, addr, len):
         """ Calculate flash CRC16 (raw) """
-        resp = self.dev.cmd_exec(JL_Loader.CMD_FLASH_CRC16_RAW,
+        resp = self.cmd_exec(JL_LoaderV2.CMD_FLASH_CRC16_RAW,
                         addr.to_bytes(4, 'big') + len.to_bytes(2, 'big'))
         return int.from_bytes(resp[:2], 'big')
 
     def usb_buffer_size(self):
         """ Get USB buffer size (aka get max flash page size) """
-        resp = self.dev.cmd_exec(JL_Loader.CMD_GET_USB_BUFF_SIZE, b'')
+        resp = self.cmd_exec(JL_LoaderV2.CMD_GET_USB_BUFF_SIZE, b'')
         return int.from_bytes(resp[:4], 'big')
 
     def version(self):
         """ Get loader version """
         # Sometimes the cmd in response is wrong... FIXME
-        rcmd, resp = self.dev.cmd_exec(JL_Loader.CMD_GET_LOADER_VER, b'', check_response=False)
+        rcmd, resp = self.cmd_exec(JL_LoaderV2.CMD_GET_LOADER_VER, b'', check_response=False)
         return str(resp[1:5][::-1], 'ascii')
 
     def maskrom_id(self):
         """ Get MaskROM ID """
-        resp = self.dev.cmd_exec(JL_Loader.CMD_GET_MASKROM_ID, b'')
+        resp = self.cmd_exec(JL_LoaderV2.CMD_GET_MASKROM_ID, b'')
         return int.from_bytes(resp[:4], 'big')
 

@@ -1,5 +1,5 @@
 from jl_stuff import *
-from jl_uboot import JL_MSCDevice, JL_UBOOT, JL_Loader
+from jl_uboot import JL_MSCDevice, JL_UBOOT, JL_LoaderV2
 from scsiio.common import SCSIException
 import argparse, cmd, time
 import pathlib, yaml
@@ -770,7 +770,7 @@ with JL_MSCDevice(device) as dev:
 
     #print_largeletters(chipname)
 
-    uboot = JL_UBOOT(dev)
+    uboot = JL_UBOOT(dev.dev)
 
     runtheloader = False
 
@@ -913,7 +913,7 @@ with JL_MSCDevice(device) as dev:
     # Let's try to gather some info beforehand
     #
 
-    loader = JL_Loader(dev)
+    loader = JL_LoaderV2(dev.dev)
 
     print(".-----------------.------------------------------------------------")
     print("| Quick info      : %s (%s)" % (chipname.upper(), '/'.join(chipspec['name'])))
@@ -937,7 +937,7 @@ with JL_MSCDevice(device) as dev:
         pass #print("(!) Failed to get USB buffer size")
 
     #try:
-    #    print("Status          : 0x%02x" % loader.read_status())
+    #    print("| Status          : 0x%02x" % loader.read_status())
     #except SCSIException:
     #    pass #print("(!) Failed to read status")
 
