@@ -4,43 +4,34 @@ This describes commands and their behavior specific to ac4100loader
 
 ## Opcodes
 
-- 0xFB = "Write Flash"
-- 0xFC = "Other"
-- 0xFD = "Read Flash"
-
-### 0xFB sub-opcodes
-
-- 0x00 = [Erase flash block](#erase-flash-block)
-- 0x01 = [Write flash](#write-flash)
-- 0x02 = [Erase flash chip](#erase-flash-chip)
-- 0x03 = [Erase flash sector](#erase-flash-sector)
-- 0x04 = [Write memory](#write-memory)
-- 0x05 = //
-- 0x06 = //
-- 0x07 = //
-- 0x08 = //
-- 0x09 = [something1](#something1)
-
-### 0xFC sub-opcodes
-
-- 0x00 = [Get flash JEDEC ID](#get-flash-jedec-id)
-- 0x01 = [something2](#something2)
-- 0x02 = [Enable Watchdog](#enable-watchdog)
-- 0x03 = //
-- 0x04 = //
-- 0x05 = //
-- 0x06 = //
-- 0x07 = [something2](#something2)
-- 0x08 = //
-- 0x09 = //
-- 0x0A = //
-- 0x0B = [Get online device](#get-online-device)
-- 0x0C = [Select SPI flash](#select-spi-flash)
-
-### 0xFD sub-opcodes
-
-- 0x00 = [Get flash JEDEC ID](#get-flash-jedec-id)
-- 0x01 = [Read flash](#read-flash)
+- 0xFB
+  - 0x00 = [Erase flash block](#erase-flash-block)
+  - 0x01 = [Write flash](#write-flash)
+  - 0x02 = [Erase flash chip](#erase-flash-chip)
+  - 0x03 = [Erase flash sector](#erase-flash-sector)
+  - 0x04 = [Write memory](#write-memory)
+  - 0x05 = //
+  - 0x06 = //
+  - 0x07 = //
+  - 0x08 = //
+  - 0x09 = [something1](#something1)
+- 0xFC
+  - 0x00 = [Get flash JEDEC ID](#get-flash-jedec-id)
+  - 0x01 = [something2](#something2)
+  - 0x02 = [Enable Watchdog](#enable-watchdog)
+  - 0x03 = //
+  - 0x04 = //
+  - 0x05 = //
+  - 0x06 = //
+  - 0x07 = [something2](#something2)
+  - 0x08 = //
+  - 0x09 = //
+  - 0x0A = //
+  - 0x0B = [Get online device](#get-online-device)
+  - 0x0C = [Select SPI flash](#select-spi-flash)
+- 0xFD
+  - 0x00 = [Get flash JEDEC ID](#get-flash-jedec-id)
+  - 0x01 = [Read flash](#read-flash)
 
 ## Commands
 

@@ -21,29 +21,20 @@ The USB IDE device is searched by this criteria:
 ## Opcodes
 
 - 0xFB
+  - 0x00 = [Erase flash block](#erase-flash-block)
+  - 0x01 = [Write flash](#write-flash)
+  - 0x02 = [Erase flash chip](#erase-flash-chip)
+  - 0x04 = [Write something](#write-something)
+  - 0x07 = [ISD start thing](#isd-start-thing)
+  - 0x08 = [Read something](#read-something)
 - 0xFC
+  - 0x01 = [something1](#something1)
+  - 0x04 = [something2](#something2)
+  - 0x05 = [something3](#something3)
+  - 0x07 = [something4](#something4)
+  - 0x09 = [something5](#something5)
 - 0xFD
-
-### 0xFB sub-opcodes
-
-- 0x00 = [Erase flash block](#erase-flash-block)
-- 0x01 = [Write flash](#write-flash)
-- 0x02 = [Erase flash chip](#erase-flash-chip)
-- 0x04 = [Write something](#write-something)
-- 0x07 = [ISD start thing](#isd-start-thing)
-- 0x08 = [Read something](#read-something)
-
-### 0xFC sub-opcodes
-
-- 0x01 = [something1](#something1)
-- 0x04 = [something2](#something2)
-- 0x05 = [something3](#something3)
-- 0x07 = [something4](#something4)
-- 0x09 = [something5](#something5)
-
-### 0xFD sub-opcodes
-
-- 0x01 = [Read flash](#read-flash)
+  - 0x01 = [Read flash](#read-flash)
 
 ## Commands
 

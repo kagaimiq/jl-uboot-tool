@@ -19,32 +19,23 @@ And there are two buffers: for data to be written (flash/memory write, set flash
 ## Opcodes
 
 - 0xFB = writing stuff
+  - 0x00 = [Erase flash block (64k)](#erase-flask-block-64k)
+  - 0x01 = [Erase flash sector (4k)](#erase-flash-sector-4k)
+  - 0x02 = [Erase flash chip](#erase-flash-chip)
+  - 0x04 = [Write flash](#write-flash)
+  - 0x06 = [Write memory](#write-memory)
+  - 0x08 = [Jump to memory](#jump-to-memory)
 - 0xFC = misc
+  - 0x03 = [Read status](#read-status)
+  - 0x09 = [Read (chip)key](#read-key)
+  - 0x0A = [Get online device](#get-online-device)
+  - 0x0B = [Read ID](#read-id)
+  - 0x0C = [Run app](#run-app)
+  - 0x0D = [Set flash command](#set-flash-command)
 - 0xFD = reading stuff
-
-### 0xFB sub-opcodes
-
-- 0x00 = [Erase flash block (64k)](#erase-flask-block-64k)
-- 0x01 = [Erase flash sector (4k)](#erase-flash-sector-4k)
-- 0x02 = [Erase flash chip](#erase-flash-chip)
-- 0x04 = [Write flash](#write-flash)
-- 0x06 = [Write memory](#write-memory)
-- 0x08 = [Jump to memory](#jump-to-memory)
-
-### 0xFC sub-opcodes
-
-- 0x03 = [Read status](#read-status)
-- 0x09 = [Read (chip)key](#read-key)
-- 0x0A = [Get online device](#get-online-device)
-- 0x0B = [Read ID](#read-id)
-- 0x0C = [Run app](#run-app)
-- 0x0D = [Set flash command](#set-flash-command)
-
-### 0xFD sub-opcodes
-
-- 0x05 = [Read flash](#read-flash)
-- 0x07 = [Read memory](#read-memory)
-- 0x0B = [Read ID](#read-id)
+  - 0x05 = [Read flash](#read-flash)
+  - 0x07 = [Read memory](#read-memory)
+  - 0x0B = [Read ID](#read-id)
 
 ## Commands
 

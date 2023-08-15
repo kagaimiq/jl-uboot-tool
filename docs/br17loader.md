@@ -21,40 +21,31 @@ This describes commands and their behavior specific to the br17loader (v204).
 ## Opcodes
 
 - 0xFB = writing stuff
+  - 0x00 = [Erase flash block (64k)](#erase-flask-block-64k)
+  - 0x01 = [Erase flash sector (4k)](#erase-flash-sector-4k)
+  - 0x02 = [Erase flash chip](#erase-flash-chip)
+  - 0x04 = [Write flash](#write-flash)
+  - 0x06 = [Write memory](#write-memory)
+  - 0x08 = [Jump to memory](#jump-to-memory)
 - 0xFC = misc
+  - 0x03 = [Read status](#read-status)
+  - 0x09 = [Read (chip)key](#read-key)
+  - 0x0A = [Get online device](#get-online-device)
+  - 0x0B = [Read ID](#read-id)
+  - 0x0C = [Run app](#run-app)
+  - 0x0D = [Set flash command](#set-flash-command)
+  - 0x0E = [Flash CRC16 (special)](#flash-crc16-special)
+  - 0x0F = fetch thing1 (ver.bin)
+  - 0x10 = fetch thing2 (BTIF)
+  - 0x11 = fetch thing3 (VMIF)
+  - 0x12 = [Write (chip)key](#write-key)
+  - 0x13 = [Flash CRC16](#flash-crc16)
+  - 0x14 = [Get USB buffer size](#get-usb-buffer-size)
+  - 0x15 = [Get loader version](#get-loader-version)
 - 0xFD = reading stuff
-
-### 0xFB sub-opcodes
-
-- 0x00 = [Erase flash block (64k)](#erase-flask-block-64k)
-- 0x01 = [Erase flash sector (4k)](#erase-flash-sector-4k)
-- 0x02 = [Erase flash chip](#erase-flash-chip)
-- 0x04 = [Write flash](#write-flash)
-- 0x06 = [Write memory](#write-memory)
-- 0x08 = [Jump to memory](#jump-to-memory)
-
-### 0xFC sub-opcodes
-
-- 0x03 = [Read status](#read-status)
-- 0x09 = [Read (chip)key](#read-key)
-- 0x0A = [Get online device](#get-online-device)
-- 0x0B = [Read ID](#read-id)
-- 0x0C = [Run app](#run-app)
-- 0x0D = [Set flash command](#set-flash-command)
-- 0x0E = [Flash CRC16 (special)](#flash-crc16-special)
-- 0x0F = fetch thing1 (ver.bin)
-- 0x10 = fetch thing2 (BTIF)
-- 0x11 = fetch thing3 (VMIF)
-- 0x12 = [Write (chip)key](#write-key)
-- 0x13 = [Flash CRC16](#flash-crc16)
-- 0x14 = [Get USB buffer size](#get-usb-buffer-size)
-- 0x15 = [Get loader version](#get-loader-version)
-
-### 0xFD sub-opcodes
-
-- 0x05 = [Read flash](#read-flash)
-- 0x07 = [Read memory](#read-memory)
-- 0x0B = [Read ID](#read-id)
+  - 0x05 = [Read flash](#read-flash)
+  - 0x07 = [Read memory](#read-memory)
+  - 0x0B = [Read ID](#read-id)
 
 ## Commands
 

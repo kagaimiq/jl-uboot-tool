@@ -28,18 +28,12 @@ So to do anything else a loader binary needs to be loaded first.
 
 ## Opcodes
 
-- 0xFB = "Write flash"
-- 0xFD = "Read flash"
-
-### 0xFB sub-opcodes
-
-- 0x06 = [Write memory](#write-memory)
-- 0x08 = [Jump to memory](#jump-to-memory)
-- 0x31 = [Write memory (encrypted)](#write-memory-encrypted)
-
-### 0xFD sub-opcodes
-
-- 0x07 = [Read memory](#read-memory)
+- 0xFB
+  - 0x06 = [Write memory](#write-memory)
+  - 0x08 = [Jump to memory](#jump-to-memory)
+  - 0x31 = [Write memory (encrypted)](#write-memory-encrypted)
+- 0xFD
+  - 0x07 = [Read memory](#read-memory)
 
 ## Commands
 

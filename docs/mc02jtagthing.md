@@ -5,14 +5,11 @@ Protocol used by `load.exe` of the mc02 sdk thing...
 ## Opcodes
 
 - 0xFA
-
-### 0xFA sub-opcodes
-
-- 0x00 = [Get JTAG test chip ID](#get-jtag-test-chip-id)
-- 0x06 = [Write dbg wb block32](#write-dbg-wb-block32)
-- 0x0F = [Run MCU thing](#run-mcu-thing)
-- 0x11 = [Read is Pro Ok](#read-is-pro-ok)
-- 0x12 = [something](#something)
+  - 0x00 = [Get JTAG test chip ID](#get-jtag-test-chip-id)
+  - 0x06 = [Write dbg wb block32](#write-dbg-wb-block32)
+  - 0x0F = [Run MCU thing](#run-mcu-thing)
+  - 0x11 = [Read is Pro Ok](#read-is-pro-ok)
+  - 0x12 = [something](#something)
 
 ## Commands
 

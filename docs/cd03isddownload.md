@@ -5,30 +5,21 @@ Directly related with [ac4100loader](ac4100loader.md) and likely [USB IDE](hb001
 ## Opcodes
 
 - 0xFB
+  - 0x00 = [Erase flash block](#erase-flash-block)
+  - 0x01 = [Write flash](#write-flash)
+  - 0x04 = [Write memory](#write-memory) ~ write loader
+  - 0x07 = [Write something](#write-something) ~ write xdata?
+  - 0x08 = [Read something](#read-something) ~ read xdata?
+  - 0x09 = [Jump to memory](#jump-to-memory) ~ run loader
 - 0xFC
+  - 0x01 = [something1](#something1)
+  - 0x02 = [Reset chip](#reset-chip)
+  - 0x09 = [something2](#something2)
+  - 0x0A = [Get chipkey-ish](#get-chipkey-ish)
+  - 0x0B = [Get online device](#get-online-device)
+  - 0x0C = [SPI flash select](#spi-flash-select)
 - 0xFD
-
-### 0xFB sub-opcodes
-
-- 0x00 = [Erase flash block](#erase-flash-block)
-- 0x01 = [Write flash](#write-flash)
-- 0x04 = [Write memory](#write-memory) ~ write loader
-- 0x07 = [Write something](#write-something) ~ write xdata?
-- 0x08 = [Read something](#read-something) ~ read xdata?
-- 0x09 = [Jump to memory](#jump-to-memory) ~ run loader
-
-### 0xFC sub-opcodes
-
-- 0x01 = [something1](#something1)
-- 0x02 = [Reset chip](#reset-chip)
-- 0x09 = [something2](#something2)
-- 0x0A = [Get chipkey-ish](#get-chipkey-ish)
-- 0x0B = [Get online device](#get-online-device)
-- 0x0C = [SPI flash select](#spi-flash-select)
-
-### 0xFD sub-opcodes
-
-- 0x01 = [Read flash](#read-flash)
+  - 0x01 = [Read flash](#read-flash)
 
 ## Commands
 
