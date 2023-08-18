@@ -1,13 +1,12 @@
 # USB loader protocol v2
 
-This is the protocol version is used by most loaders, and so far by the UBOOT2.00 too.
+This is the protocol version is used by most loaders, as well as the UBOOT1.00 or UBOOT2.00 devices.
 
 This is all-inclusive list of commands and their behavior,
 for more specific info on each loader look there:
 
 - [bc51loader](bc51loader.md)
 - [br17loader](br17loader.md)
-- [dv12loader](dv12loader.md)
 
 ## Protocol variations/implementations
 
@@ -31,13 +30,16 @@ It can have more features than UBOOT2.00 (e.g. burning the chipkey/efuses), but 
 
 These are the differences between loaders and their protocol support.
 
-- [bc51loader](bc51loader.md)
+- dv12loader
   * __Base protocol__
   * Flash erasing (FB00, FB01, FB02)
   * Flash write (FB04) and read (FD05)
-  * Memory write (FB06) and read (FD07) - mimics the UBOOT1.00 one
-  * Memory jump (FB08) - more or less the UBOOT1.00 one except for the hooks, etc.
+  * Memory write (FB06) and read (FD07)
+  * Memory jump (FB08) - different from UBOOT1.00 one!
+- [bc51loader](bc51loader.md)
+  * Nothing changed
 - [br17loader](br17loader.md)
+  * Flash writes does not require CRCs
   * Adds flash CRC16 calculation (FC0E, FC13)
   * Adds things fetch commands (FC0F, FC10, FC11)
   * Adds chipkey write command (FC12)
@@ -56,11 +58,11 @@ Most loaders accept an argument in form of a 16-bit value, passed by the UBOOT's
 
 - bit0..3 = Target memory (dlmode)
   * 0 = SDRAM
-  * 1 = SPI flash
-  * 2 = SD card
-  * 3 = SD card (again)
-  * 4 = SPI flash (again)
-  * 5 = SPI flash (again)
+  * 1 = SPI NOR flash
+  * 2 = SPI NAND flash
+  * 3 = SD card
+  * 4 = SPI NOR flash (again)
+  * 5 = SPI NOR flash (again)
   * 7 = OTP
 - bit4..11 = Clock speed divider
   * 0 = div1
@@ -74,35 +76,47 @@ Most loaders accept an argument in form of a 16-bit value, passed by the UBOOT's
 ## Opcodes
 
 - 0xFB = "Write flash"
-  - 0x00 = Erase flash block (64k)
-  - 0x01 = Erase flash sector (4k)
-  - 0x02 = Erase flash cip
-  - 0x04 = Write flash (device)
+  - 0x00 = Erase flash block
+  - 0x01 = Erase flash sector
+  - 0x02 = Erase flash chip
+  - 0x04 = [Write flash](#write-flash)
   - 0x06 = [Write memory](#write-memory)
   - 0x08 = [Jump to memory](#jump-to-memory)
   - 0x31 = [Write memory (RxGp encrypted, DV15 specific?)](#write-memory-rxgp-encrypted)
 - 0xFC = "Other"
   - 0x03 = Read status
-  - 0x09 = Read chipkey
+  - 0x09 = Read key
   - 0x0A = [Get online device](#get-online-device)
-  - 0x0B = Read (device) ID
+  - 0x0B = Read ID
   - 0x0C = Run app
-  - 0x0D = Set flash command
-  - 0x0E = Flash (device) CRC16 (special)
+  - 0x0D = [Set flash command](#set-flash-command)
+  - 0x0E = Flash CRC16 (special)
   - 0x0F = fetch thing1
   - 0x10 = fetch thing2
   - 0x11 = fetch thing3
-  - 0x12 = Write (chip)key
-  - 0x13 = Flash (device) CRC16
-  - 0x14 = Get USB buffer size
+  - 0x12 = Write key
+  - 0x13 = Flash CRC16
+  - 0x14 = [Get USB buffer size](#get-usb-buffer-size)
   - 0x15 = Get loader version
-  - 0x16 = Get MaskROM ID
+  - 0x16 = [Get MaskROM ID](#get-maskrom-id)
 - 0xFD = "Read flash"
-  - 0x05 = Read flash (device)
+  - 0x05 = Read flash
   - 0x07 = [Read memory](#read-memory)
-  - 0x0B = Read (device) ID
+  - 0x0B = Read ID
 
 ## Commands
+
+### Write flash
+
+Writes data into flash.
+
+- Command: `FB 04 AA:aa:aa:aa SS:ss -- cc:CC -- -- -- -- --`
+  * AA:aa:aa:aa = Address (for SD card it's still byte-based)
+  * SS:ss = Dat asize
+  * cc:CC = CRC16 of data _(now absent)_
+- Data in: Data to write
+
+**Note:** Prior to BR17 (or so) the flash was written only when the CRC check succeeded, but since then the command does not take a CRC argument anymore!
 
 ### Write memory
 
@@ -136,7 +150,7 @@ Reads data from a specified memory location.
 
 Similarly to the [Write memory](#write-memory) case, some chips return the data in the MengLi-encrypted form. This is implemented by encrypting the target memory location, then sending it out and finally decrypting it back.
 
-So care should be taken when accessing the critical parts like parts of the ROM's runtime or something like that. Peripherals can be screwed up as well! and read-only ares like the ROM or reserved memory areas won't be encrypted at all!
+So care should be taken when accessing critical parts like parts of the ROM's runtime or something like that. Peripherals can be screwed up as well! and read-only ares like the ROM or reserved memory areas won't be encrypted at all!
 
 This behavior is rather a limitation of the bufferless approach, where the transfers are done directly via USB's DMA (for sending to host) or the endpoint buffers (for receiving from host) rather than having a buffer that is then manipulated and transfered over USB.
 
@@ -233,6 +247,63 @@ Gets the device type and its ID that is currently "online".
     * for SPI (NOR) flash it's the JEDEC ID returned by the 0x9F command
     * for OTP, it is 0x4f545010 "OTP\x10"
     * for SD card, it is 0x73647466 "sdtf"
+
+### Set flash command
+
+This command sets the command opcodes that is used for interaction with SPI NOR or SPI NAND flash.
+
+- Command: `FC 0D -- -- -- -- SS:ss -- -- -- -- -- -- -- --`
+  * SS:ss = command table length
+- Data in: command table data
+
+For SPI NOR the table has the following structure:
+
+| Byte | Default | Description                |
+|------|---------|----------------------------|
+| 0    | 0xC7    | Chip erase                 |
+| 1    | 0xD8    | Block erase                |
+| 2    | 0x20    | Sector erase               |
+| 3    | 0x03    | Read                       |
+| 4    | 0x02    | Program                    |
+| 5    | 0x05    | Read status register       |
+| 6    | 0x06    | Write enable               |
+| 7    | 0x01    | Write status register      |
+
+For SPI NAND the table has the following structure instead:
+
+| Byte | Default | Description                |
+|------|---------|----------------------------|
+| 0    | 0xD8    | Block erase                |
+| 1    | 0xA0    |                            |
+| 2    | 0x9F    | Read ID                    |
+| 3    | 0x13    | Page read to cache         |
+| 4    | 0x03    | Read from cache            |
+| 5    | 0x84    | Program load random data   |
+| 6    | 0x02    | Program load               |
+| 7    | 0x10    | Program execute            |
+| 8    | 0xC0    |                            |
+| 9    | 0x06    | Write enable               |
+| 10   | 0x04    | Write disable              |
+
+Please note that the size argument in the command is only used for the length of the reception itself, while the copy into the command table itself will be done always with the size of that table (i.e. 8 or 11 bytes)
+
+### Get USB buffer size
+
+This command returns the size of the USB buffer. If this command wasn't implemented then assume buffer size of 512 bytes.
+
+- Command: `FC 14 -- -- -- -- -- -- -- -- -- -- -- -- -- --`
+- Data out: `FC 14 SS:ss:ss:ss -- -- -- -- -- -- -- -- -- --`
+  * SS:ss:ss:ss = USB buffer size
+
+### Get MaskROM ID
+
+This command reads the "MaskROM ID".
+
+- Command: `FC 16 -- -- -- -- -- -- -- -- -- -- -- -- -- --`
+- Data out: `FC 16 AA:aa:aa:aa -- -- -- -- -- -- -- -- -- --`
+  * AA:aa:aa:aa = MaskROM ID
+
+The ID value is usually obtained by calling a stub in the MaskROM which returns a 32-bit integer that is usually next to the stub itself.
 
 ### Write memory (RxGp encrypted)
 
