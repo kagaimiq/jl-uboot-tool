@@ -65,10 +65,13 @@ And there are two buffers: for data to be written (flash/memory write, set flash
 
 ### Write flash
 
-- Command: `FB 04 AA:aa:aa:aa SS:ss -- -- -- -- -- -- -- --`
+- Command: `FB 04 AA:aa:aa:aa SS:ss -- cc:CC -- -- -- -- --`
   * AA:aa:aa:aa = Flash address
   * SS:ss = Data size
+  * cc:CC = CRC16 of data
 - Data in: Data to write
+
+Note: the data won't be written into flash unless the CRC matches!
 
 ### Read flash
 
