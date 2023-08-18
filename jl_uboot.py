@@ -220,8 +220,10 @@ class JL_LoaderV2(JL_MSCProtocolBase):
 
     def flash_write(self, addr, data):
         """ Write flash """
+        # Note: the CRC16 for data was only required for loaders prior to BR17 one (or something like that)
         self.cmd_exec_dataout(JL_LoaderV2.CMD_WRITE_FLASH,
-                addr.to_bytes(4, 'big') + len(data).to_bytes(2, 'big'), data)
+                addr.to_bytes(4, 'big') + len(data).to_bytes(2, 'big')
+                    + b'\x00' + jl_crc16(data).to_bytes(2, 'little'), data)
 
     def flash_read(self, addr, len):
         """ Read flash """
