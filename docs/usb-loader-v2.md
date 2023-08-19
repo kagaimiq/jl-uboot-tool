@@ -65,7 +65,7 @@ Most loaders accept an argument in form of a 16-bit value, passed by the UBOOT's
   * 5 = SPI NOR flash (again)
   * 7 = OTP
 - bit4..11 = Clock speed divider
-  * 0 = div1
+  * 0 = "default" (div1)
   * 1..255 = div1..255
 - bit12..15 = SPI mode
   * 0 = Half-duplex SPI (2wire 1bit)
@@ -76,35 +76,59 @@ Most loaders accept an argument in form of a 16-bit value, passed by the UBOOT's
 ## Opcodes
 
 - 0xFB = "Write flash"
-  - 0x00 = Erase flash block
-  - 0x01 = Erase flash sector
-  - 0x02 = Erase flash chip
+  - 0x00 = [Erase flash block](#erase-flash-block)
+  - 0x01 = [Erase flash sector](#erase-flash-sector)
+  - 0x02 = [Erase flash chip](#erase-flash-chip)
   - 0x04 = [Write flash](#write-flash)
   - 0x06 = [Write memory](#write-memory)
   - 0x08 = [Jump to memory](#jump-to-memory)
   - 0x31 = [Write memory (RxGp encrypted, DV15 specific?)](#write-memory-rxgp-encrypted)
 - 0xFC = "Other"
-  - 0x03 = Read status
-  - 0x09 = Read key
+  - 0x03 = [Read status](#read-status)
+  - 0x09 = [Read key](#read-key)
   - 0x0A = [Get online device](#get-online-device)
-  - 0x0B = Read ID
-  - 0x0C = Run app
+  - 0x0B = [Read ID](#read-id)
+  - 0x0C = [Run app](#run-app)
   - 0x0D = [Set flash command](#set-flash-command)
-  - 0x0E = Flash CRC16 (special)
+  - 0x0E = [Flash CRC16](#flash-crc16)
   - 0x0F = fetch thing1
   - 0x10 = fetch thing2
   - 0x11 = fetch thing3
-  - 0x12 = Write key
-  - 0x13 = Flash CRC16
+  - 0x12 = [Write key](#write-key)
+  - 0x13 = [Flash CRC16 (raw)](#flash-crc16-raw)
   - 0x14 = [Get USB buffer size](#get-usb-buffer-size)
   - 0x15 = Get loader version
   - 0x16 = [Get MaskROM ID](#get-maskrom-id)
 - 0xFD = "Read flash"
-  - 0x05 = Read flash
+  - 0x05 = [Read flash](#read-flash)
   - 0x07 = [Read memory](#read-memory)
-  - 0x0B = Read ID
+  - 0x0B = [Read ID](#read-id) (same as in FC-0B)
 
 ## Commands
+
+### Erase flash block
+
+Erases a block in SPI NOR or NAND flash.
+
+- Command: `FB 00 AA:aa:aa:aa -- -- -- -- -- -- -- -- -- --`
+- Data out: `FB 00 RR -- -- -- -- -- -- -- -- -- -- -- -- --`
+  * RR = Result, zero means successful (only applicable to SPI NAND)
+
+### Erase flash sector
+
+Erases a sector in SPI NOR flash.
+
+- Command: `FB 01 AA:aa:aa:aa -- -- -- -- -- -- -- -- -- --`
+- Data out: `FB 01 -- -- -- -- -- -- -- -- -- -- -- -- -- --`
+
+### Erase flash chip
+
+Erases whole flash chip.
+
+- Command: `FB 02 -- -- -- -- -- -- -- -- -- -- -- -- -- --`
+- Data out: `FB 02 -- -- -- -- -- -- -- -- -- -- -- -- -- --`
+
+**Note:** This command is not always implemented!
 
 ### Write flash
 
@@ -112,11 +136,25 @@ Writes data into flash.
 
 - Command: `FB 04 AA:aa:aa:aa SS:ss -- cc:CC -- -- -- -- --`
   * AA:aa:aa:aa = Address (for SD card it's still byte-based)
-  * SS:ss = Dat asize
+  * SS:ss = Data size
   * cc:CC = CRC16 of data _(now absent)_
-- Data in: Data to write
+- Data in: Data to write into flash
 
 **Note:** Prior to BR17 (or so) the flash was written only when the CRC check succeeded, but since then the command does not take a CRC argument anymore!
+
+### Read flash
+
+Reads data from flash.
+
+- Command: `FD 05 AA:aa:aa:aa SS:ss -- -- -- -- -- -- -- --`
+  * AA:aa:aa:aa = Address (for SD card it's still byte-based)
+  * SS:ss = Data size
+- Data out: Data read from flash
+
+#### br17loader note
+
+The flash readout is locked out until you execute the [Read key](#read-key) command
+with argument of 0xAC6900. It can be also locked again by specifying something other than 0xAC6900.
 
 ### Write memory
 
@@ -148,7 +186,7 @@ Reads data from a specified memory location.
 
 #### UBOOT1.00 note
 
-Similarly to the [Write memory](#write-memory) case, some chips return the data in the MengLi-encrypted form. This is implemented by encrypting the target memory location, then sending it out and finally decrypting it back.
+Similar to the [Write memory](#write-memory) case, some chips return the data in the MengLi-encrypted form. This is implemented by encrypting the target memory location, then sending it out and finally decrypting it back.
 
 So care should be taken when accessing critical parts like parts of the ROM's runtime or something like that. Peripherals can be screwed up as well! and read-only ares like the ROM or reserved memory areas won't be encrypted at all!
 
@@ -222,6 +260,21 @@ Basically in that case the command lacks the "argument" field, and it also does 
 Also the response is sent *before* calling the code, rather than doing it after.
 Maybe it has something to do with the fact that the code can't setup the hooks and whatnot, so there's nothing to wait for until receiving the next command.
 
+### Read key
+
+Reads a key from the device. (usually this is also called a "chipkey")
+
+- Command: `FC 09 AA:aa:aa:aa -- -- -- -- -- -- -- -- -- --`
+  * AA:aa:aa:aa = "address" argument _(usually ignored)_
+- Data out: `FC 09 -- -- -- -- KK:kk -- -- -- -- -- -- -- --`
+  * KK:kk = The key
+
+The key read from this command is encrypted with the MengLi crypto when the key was in little-endian form, so to decrypt it you need to convert it from big-endian into little-endian, then decrypt it and finally convert it to int.
+
+#### br17loader note
+
+The flash reading will be unlocked if this command will be executed with "address" argument set to 0xAC6900. Then it could be locked back by specifying something other than 0xAC6900.
+
 ### Get online device
 
 Gets the device type and its ID that is currently "online".
@@ -247,6 +300,60 @@ Gets the device type and its ID that is currently "online".
     * for SPI (NOR) flash it's the JEDEC ID returned by the 0x9F command
     * for OTP, it is 0x4f545010 "OTP\x10"
     * for SD card, it is 0x73647466 "sdtf"
+
+### Read ID
+
+Reads the online device ID.
+
+- Command: `FC 0B -- -- -- -- -- -- -- -- -- -- -- -- -- --`
+- Data out: `FC 0B AA:aa:aa -- -- -- -- -- -- -- -- -- -- --`
+  * AA:aa:aa = Device ID
+
+The Device ID is basically the ID from the [Get online device](#get-online-device) command but shifted 8 bits right (so you get bits 31..8 of it)
+
+### Run app
+
+Runs the application in some way. (sometimes this command is also called "Reset" and in this case it resets the device)
+
+- Command: `FC 0C AA:aa:aa:aa -- -- -- -- -- -- -- -- -- --`
+  * AA:aa:aa:aa = something
+- Data out: `FC 0C -- -- -- -- -- -- -- -- -- -- -- -- -- --`
+
+The implementation of this command depends, some reset the chip, some do not do anything.
+
+### Flash CRC16
+
+Calculates the CRC16 of a given region in flash.
+
+- Command: `FC 0D AA:aa:aa:aa SS:ss -- -- -- -- -- -- -- --`
+  * AA:aa:aa:aa = Address
+  * SS:ss = Size
+- Data out: `FC 0D CC:cc -- -- -- -- -- -- -- -- -- -- -- --`
+  * CC:cc = Calculated CRC16
+
+The CRC might be different from what is on the flash given what region you access.
+For a raw CRC16 calculation the [Flash CRC16 (raw)](#flash-crc16-raw) command is used instead..
+
+### Write key
+
+Writes the key into device.
+
+**Warning: this operation is usually irreversible due to the fact that the key is usually store in the eFuses or the OTP!**
+
+- Command: `FC 12 -- -- KK:kk -- -- -- -- -- -- -- -- -- --`
+  * KK:kk = key to write
+- Data out: `FC 12 RR:rr:rr:rr -- -- -- -- -- -- -- -- -- --`
+  * RR:rr:rr:rr = result code
+
+### Flash CRC16 (raw)
+
+Calculates the CRC16 of a given region in flash. (without any possible alterations unlike [regular command](#flash-crc16))
+
+- Command: `FC 13 AA:aa:aa:aa SS:ss -- -- -- -- -- -- -- -- --`
+  * AA:aa:aa:aa = Address
+  * SS:ss = Size
+- Data out: `FC 13 CC:cc -- -- -- -- -- -- -- -- -- -- -- -- --`
+  * CC:cc = Calculated CRC16
 
 ### Set flash command
 
