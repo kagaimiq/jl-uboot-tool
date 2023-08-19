@@ -1,27 +1,49 @@
 # USB loaders definition
 
+# -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- #
+# AC41xx
+
 cd03:
     file: loaderblobs/usb/ac4100loader.bin
     address: 0x9000
+
+    info:
+        protocol-version: v1
+
+# -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- #
+# AC46xx
 
 bt15:
     file: loaderblobs/usb/bt15loader.bin
     address: 0x2000
 
+    info:
+        protocol-version: v2
+
 bc51:
     file: loaderblobs/usb/bc51loader.bin
     address: 0x2000
 
+    info:
+        protocol-version: v2
+
 # -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- #
+# AC5xxx
 
 dv12:
     file: loaderblobs/usb/dv12loader.bin
     address: 0x1f02000
 
+    info:
+        protocol-version: v2
+
 # this seems not to work
 #dv15:
 #    file: loaderblobs/usb/dv15loader.bin
 #    address: 0xf02000
+#
+#    info:
+#        protocol-version: v2
 
 dv15:
     file: loaderblobs/usb/dv15loader.enc
@@ -30,17 +52,27 @@ dv15:
     block-size: 512
     argument: 0x0011   # div1, SPI flash
 
+    info:
+        protocol-version: v2
+
 dv16:
     file: loaderblobs/usb/dv16loader.bin
     address: 0x3f02000
 
+    info:
+        protocol-version: v2
+
 # -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- #
+# SHxx
 
 sh54:
     file: loaderblobs/usb/sh54loader.bin
     address: 0xb00
     encryption: MengLi
     block-size: 512
+
+    info:
+        protocol-version: v2
 
 # sh55: there isn't a USB loader for it? but only UART?
 
@@ -51,7 +83,11 @@ uc03:
     encryption: MengLi
     block-size: 512
 
+    info:
+        protocol-version: v2
+
 # -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- #
+# BDxx
 
 bd19:
     file: loaderblobs/usb/bd19loader.bin
@@ -59,32 +95,53 @@ bd19:
     encryption: MengLi
     block-size: 512
 
+    info:
+        protocol-version: v2
+
 bd29:
     file: loaderblobs/usb/bd29loader.bin
     address: 0x2000
     encryption: MengLi
     block-size: 512
 
+    info:
+        protocol-version: v2
+
 # -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- #
+# BRxx
 
 br17:
     file: loaderblobs/usb/br17loader.bin
     address: 0x2000
     argument: 0x0011   # div1, SPI flash
 
+    info:
+        protocol-version: v2
+        quirks:
+            flash-read-unlock-via-readkey: 0xAC6900
+
 br20:
     file: loaderblobs/usb/br20loader.bin
     address: 0x2000
     argument: 0x0007   # OTP
+
+    info:
+        protocol-version: v2
 
 br21:
     file: loaderblobs/usb/br21loader.bin
     address: 0x2000
     argument: 0x0001   # SPI flash
 
+    info:
+        protocol-version: v2
+
 br22:
     file: loaderblobs/usb/br22loader.bin
     address: 0x2000
+
+    info:
+        protocol-version: v2
 
 br23:
     file: loaderblobs/usb/br23loader.bin
@@ -92,11 +149,17 @@ br23:
     encryption: MengLi
     block-size: 512
 
+    info:
+        protocol-version: v2
+
 br25:
     file: loaderblobs/usb/br25loader.bin
     address: 0x12000
     encryption: MengLi
     block-size: 512
+
+    info:
+        protocol-version: v2
 
 br28:
     file: loaderblobs/usb/br28loader.bin
@@ -104,11 +167,17 @@ br28:
     encryption: MengLi
     block-size: 512
 
+    info:
+        protocol-version: v2
+
 br30:
     file: loaderblobs/usb/br30loader.bin
     address: 0x2000
     encryption: MengLi
     block-size: 512
+
+    info:
+        protocol-version: v2
 
 br34:
     file: loaderblobs/usb/br34loader.bin
@@ -116,14 +185,24 @@ br34:
     encryption: MengLi
     block-size: 512
 
+    info:
+        protocol-version: v2
+
 # -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- #
+# WLxx
 
 wl80:
     file: loaderblobs/usb/wl80loader.bin
     address: 0x1c02000
+
+    info:
+        protocol-version: v2
 
 wl82:
     file: loaderblobs/usb/wl82loader.bin
     address: 0x1c02000
     encryption: MengLi
     block-size: 512
+
+    info:
+        protocol-version: v2
