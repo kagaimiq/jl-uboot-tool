@@ -131,6 +131,101 @@ class JL_MSCProtocolBase:
         self.dev.execute(self.cmd_prepare_cdb(cmd, args), data, None)
 
 
+
+class JL_LoaderV1(JL_MSCProtocolBase):
+    """
+    First gen loader protocol implementation, used in e.g. AC4100
+    or even going back to the USB IDE for AC209N...
+    """
+
+    #
+    # Commands
+    #
+    CMD_ERASE_FLASH_BLOCK           = 0xFB00
+    CMD_WRITE_FLASH                 = 0xFB01
+    CMD_ERASE_FLASH_CHIP            = 0xFB02
+    CMD_ERASE_FLASH_SECTOR          = 0xFB03
+    CMD_WRITE_MEMORY                = 0xFB04
+    CMD_STH_FB05                    = 0xFB05
+    CMD_STH_FB06                    = 0xFB06
+    CMD_WRITE_WTW                   = 0xFB07
+    CMD_READ_WTW                    = 0xFB08
+    CMD_JUMP_TO_MEMORY              = 0xFB09
+
+    CMD_FLASH_ID                    = 0xFC00
+    CMD_STH_FC01                    = 0xFC01
+    CMD_RESET                       = 0xFC02
+    CMD_STH_FC03                    = 0xFC03
+    CMD_STH_FC04                    = 0xFC04
+    CMD_STH_FC05                    = 0xFC05
+    CMD_STH_FC06                    = 0xFC06
+    CMD_STH_FC07                    = 0xFC07
+    CMD_STH_FC08                    = 0xFC08
+    CMD_STH_FC09                    = 0xFC09
+    CMD_GET_CHIPKEYISH              = 0xFC0A
+    CMD_GET_ONLINE_DEVICE           = 0xFC0B
+    CMD_SELECT_FLASH                = 0xFC0C
+
+    CMD_READ_FLASH                  = 0xFD01
+
+    #
+    # Device types (as returned by the GET_ONLINE_DEVICE command)
+    #
+    DEVTYPE_NONE                    = 0x00
+    DEVTYPE_SPI_FLASH               = 0x01
+    DEVTYPE_SD_CARD                 = 0x02
+
+    #-------------------------------------------#
+
+    def flash_erase_block(self, addr):
+        """ Erase flash block (64k) """
+        self.cmd_exec(JL_LoaderV1.CMD_ERASE_FLASH_BLOCK,
+                            addr.to_bytes(4, 'big'))
+
+    def flash_write(self, addr, data):
+        """ Write flash """
+        self.cmd_exec_dataout(JL_LoaderV1.CMD_WRITE_FLASH,
+                addr.to_bytes(4, 'big') + len(data).to_bytes(2, 'big')
+                    + b'\x00' + jl_crc16(data).to_bytes(2, 'little'), data)
+
+    def flash_erase_chip(self):
+        """ Erase flash chip """
+        resp = self.cmd_exec(JL_LoaderV1.CMD_ERASE_FLASH_CHIP, b'')
+
+    def flash_erase_sector(self, addr):
+        """ Erase flash sector (4k) """
+        self.cmd_exec(JL_LoaderV1.CMD_ERASE_FLASH_SECTOR,
+                            addr.to_bytes(4, 'big'))
+
+    def mem_write(self, addr, data):
+        """ Write memory """
+        self.cmd_exec_dataout(JL_LoaderV1.CMD_WRITE_MEMORY,
+                addr.to_bytes(4, 'big') + len(data).to_bytes(2, 'big'), data)
+
+    def mem_jump(self, addr, arg):
+        """ Jump to memory """
+        self.cmd_exec(JL_LoaderV1.CMD_JUMP_TO_MEMORY,
+                    addr.to_bytes(4, 'big') + arg.to_bytes(2, 'big'))
+
+    def online_device(self):
+        """ Get online device (unlike V2 protocol it only returns the device type) """
+        resp = self.cmd_exec(JL_LoaderV1.CMD_GET_ONLINE_DEVICE, b'')
+        return resp[0]
+
+    def flash_select(self, sel):
+        """ Select SPI flash, sel is one of:
+        0 = SPI_FLASH_CODE,
+        1 = SPI_FLASH_DATA
+        """
+        self.cmd_exec(JL_LoaderV1.CMD_SELECT_FLASH, bytes([sel]))
+
+    def flash_read(self, addr, size):
+        """ Read flash """
+        return self.cmd_exec_datain(JL_LoaderV1.CMD_READ_FLASH,
+                addr.to_bytes(4, 'big') + len.to_bytes(2, 'big'), len)
+
+
+
 class JL_UBOOT(JL_MSCProtocolBase):
     """
     UBOOT1.00 class implementation for all (or most?) UBOOT1.00 variants.
@@ -200,18 +295,19 @@ class JL_LoaderV2(JL_MSCProtocolBase):
     #-------------------------------------------#
 
     def flash_erase_block(self, addr):
-        """ Erase flash block (64k) """
+        """ Erase flash block """
         resp = self.cmd_exec(JL_LoaderV2.CMD_ERASE_FLASH_BLOCK,
                             addr.to_bytes(4, 'big'))
+        return resp[0]
 
     def flash_erase_sector(self, addr):
-        """ Erase flash sector (4k) """
-        resp = self.cmd_exec(JL_LoaderV2.CMD_ERASE_FLASH_SECTOR,
+        """ Erase flash sector """
+        self.cmd_exec(JL_LoaderV2.CMD_ERASE_FLASH_SECTOR,
                             addr.to_bytes(4, 'big'))
 
     def flash_erase_chip(self):
         """ Erase flash chip """
-        resp = self.cmd_exec(JL_LoaderV2.CMD_ERASE_FLASH_CHIP, b'')
+        self.cmd_exec(JL_LoaderV2.CMD_ERASE_FLASH_CHIP, b'')
 
     def read_status(self):
         """ Read status """
