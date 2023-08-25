@@ -16,7 +16,7 @@ This describes commands and their behavior specific to ac4100loader
   - 0x08 = //
   - 0x09 = [something1](#something1)
 - 0xFC
-  - 0x00 = [Get flash JEDEC ID](#get-flash-jedec-id)
+  - 0x00 = [Get flash ID](#get-flash-id)
   - 0x01 = [something2](#something2)
   - 0x02 = [Enable Watchdog](#enable-watchdog)
   - 0x03 = //
@@ -30,7 +30,7 @@ This describes commands and their behavior specific to ac4100loader
   - 0x0B = [Get online device](#get-online-device)
   - 0x0C = [Select SPI flash](#select-spi-flash)
 - 0xFD
-  - 0x00 = [Get flash JEDEC ID](#get-flash-jedec-id)
+  - 0x00 = [Get flash ID](#get-flash-id)
   - 0x01 = [Read flash](#read-flash)
 
 ## Commands
@@ -88,7 +88,7 @@ Seems like this was the memory jump command.
   * BB -- bb = something2 (size?)
 - Data out: `FB 09 -- -- -- -- -- -- -- -- -- -- -- -- -- --`
 
-### Get flash JEDEC ID
+### Get flash ID
 
 Reads the flash's JECEC ID (via command 0x9F, receives 3 bytes)
 
