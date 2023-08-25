@@ -46,21 +46,27 @@ class JL_MSCDevice:
 
             # if it's an UBOOT device then we'll proceed
             if product.startswith('UBOOT'):
-                print(" ok (%s %s %s)" % (vendor, product, prodrev))
                 break
 
             # otherwise try to enter this mode...
             # product.startswith(('UDISK','DEVICE'))
             else:
-                ldr = JL_LoaderV2(self)
+                ldr = JL_LoaderV2(self.dev)
 
                 try:
-                    ldr.run_app() # any command will suffice
+                    ldr.online_device() # any command will suffice
+
+                    # if it didn't fail, then assume we did get it.
+                    #  (in case the fw handles the protocol!)
+                    #  - Temporary fix! -
+                    break
                 except SCSIException:
                     pass
 
             self.dev.close()
             time.sleep(.5)
+
+        print(" ok (%s %s %s)" % (vendor, product, prodrev))
 
     def close(self):
         self.dev.close()
@@ -207,6 +213,11 @@ class JL_LoaderV1(JL_MSCProtocolBase):
         self.cmd_exec(JL_LoaderV1.CMD_JUMP_TO_MEMORY,
                     addr.to_bytes(4, 'big') + arg.to_bytes(2, 'big'))
 
+    def read_id(self):
+        """ Read device ID """
+        resp = self.cmd_exec(JL_LoaderV1.CMD_FLASH_ID, b'')
+        return int.from_bytes(resp[:3], 'big')
+
     def online_device(self):
         """ Get online device (unlike V2 protocol it only returns the device type) """
         resp = self.cmd_exec(JL_LoaderV1.CMD_GET_ONLINE_DEVICE, b'')
@@ -222,8 +233,7 @@ class JL_LoaderV1(JL_MSCProtocolBase):
     def flash_read(self, addr, size):
         """ Read flash """
         return self.cmd_exec_datain(JL_LoaderV1.CMD_READ_FLASH,
-                addr.to_bytes(4, 'big') + len.to_bytes(2, 'big'), len)
-
+                addr.to_bytes(4, 'big') + size.to_bytes(2, 'big'), size)
 
 
 class JL_UBOOT(JL_MSCProtocolBase):
