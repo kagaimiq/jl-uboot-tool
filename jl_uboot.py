@@ -147,80 +147,82 @@ class JL_LoaderV1(JL_MSCProtocolBase):
     #
     # Commands
     #
-    CMD_ERASE_FLASH_BLOCK           = 0xFB00
-    CMD_WRITE_FLASH                 = 0xFB01
-    CMD_ERASE_FLASH_CHIP            = 0xFB02
-    CMD_ERASE_FLASH_SECTOR          = 0xFB03
-    CMD_WRITE_MEMORY                = 0xFB04
-    CMD_STH_FB05                    = 0xFB05
-    CMD_STH_FB06                    = 0xFB06
-    CMD_WRITE_WTW                   = 0xFB07
-    CMD_READ_WTW                    = 0xFB08
-    CMD_JUMP_TO_MEMORY              = 0xFB09
+    class Cmd:
+        ERASE_FLASH_BLOCK           = 0xFB00
+        WRITE_FLASH                 = 0xFB01
+        ERASE_FLASH_CHIP            = 0xFB02
+        ERASE_FLASH_SECTOR          = 0xFB03
+        WRITE_MEMORY                = 0xFB04
+        STH_FB05                    = 0xFB05
+        STH_FB06                    = 0xFB06
+        WRITE_WTW                   = 0xFB07
+        READ_WTW                    = 0xFB08
+        JUMP_TO_MEMORY              = 0xFB09
 
-    CMD_FLASH_ID                    = 0xFC00
-    CMD_STH_FC01                    = 0xFC01
-    CMD_RESET                       = 0xFC02
-    CMD_STH_FC03                    = 0xFC03
-    CMD_STH_FC04                    = 0xFC04
-    CMD_STH_FC05                    = 0xFC05
-    CMD_STH_FC06                    = 0xFC06
-    CMD_STH_FC07                    = 0xFC07
-    CMD_STH_FC08                    = 0xFC08
-    CMD_STH_FC09                    = 0xFC09
-    CMD_GET_CHIPKEYISH              = 0xFC0A
-    CMD_GET_ONLINE_DEVICE           = 0xFC0B
-    CMD_SELECT_FLASH                = 0xFC0C
+        FLASH_ID                    = 0xFC00
+        STH_FC01                    = 0xFC01
+        RESET                       = 0xFC02
+        STH_FC03                    = 0xFC03
+        STH_FC04                    = 0xFC04
+        STH_FC05                    = 0xFC05
+        STH_FC06                    = 0xFC06
+        STH_FC07                    = 0xFC07
+        STH_FC08                    = 0xFC08
+        STH_FC09                    = 0xFC09
+        GET_CHIPKEYISH              = 0xFC0A
+        GET_ONLINE_DEVICE           = 0xFC0B
+        SELECT_FLASH                = 0xFC0C
 
-    CMD_READ_FLASH                  = 0xFD01
+        READ_FLASH                  = 0xFD01
 
     #
     # Device types (as returned by the GET_ONLINE_DEVICE command)
     #
-    DEVTYPE_NONE                    = 0x00
-    DEVTYPE_SPI_FLASH               = 0x01
-    DEVTYPE_SD_CARD                 = 0x02
+    class DevType:
+        NONE                        = 0x00
+        SPI_FLASH                   = 0x01
+        SD_CARD                     = 0x02
 
     #-------------------------------------------#
 
     def flash_erase_block(self, addr):
         """ Erase flash block (64k) """
-        self.cmd_exec(JL_LoaderV1.CMD_ERASE_FLASH_BLOCK,
+        self.cmd_exec(JL_LoaderV1.Cmd.ERASE_FLASH_BLOCK,
                             addr.to_bytes(4, 'big'))
 
     def flash_write(self, addr, data):
         """ Write flash """
-        self.cmd_exec_dataout(JL_LoaderV1.CMD_WRITE_FLASH,
+        self.cmd_exec_dataout(JL_LoaderV1.Cmd.WRITE_FLASH,
                 addr.to_bytes(4, 'big') + len(data).to_bytes(2, 'big')
                     + b'\x00' + jl_crc16(data).to_bytes(2, 'little'), data)
 
     def flash_erase_chip(self):
         """ Erase flash chip """
-        resp = self.cmd_exec(JL_LoaderV1.CMD_ERASE_FLASH_CHIP, b'')
+        resp = self.cmd_exec(JL_LoaderV1.Cmd.ERASE_FLASH_CHIP, b'')
 
     def flash_erase_sector(self, addr):
         """ Erase flash sector (4k) """
-        self.cmd_exec(JL_LoaderV1.CMD_ERASE_FLASH_SECTOR,
+        self.cmd_exec(JL_LoaderV1.Cmd.ERASE_FLASH_SECTOR,
                             addr.to_bytes(4, 'big'))
 
     def mem_write(self, addr, data):
         """ Write memory """
-        self.cmd_exec_dataout(JL_LoaderV1.CMD_WRITE_MEMORY,
+        self.cmd_exec_dataout(JL_LoaderV1.Cmd.WRITE_MEMORY,
                 addr.to_bytes(4, 'big') + len(data).to_bytes(2, 'big'), data)
 
     def mem_jump(self, addr, arg):
         """ Jump to memory """
-        self.cmd_exec(JL_LoaderV1.CMD_JUMP_TO_MEMORY,
+        self.cmd_exec(JL_LoaderV1.Cmd.JUMP_TO_MEMORY,
                     addr.to_bytes(4, 'big') + arg.to_bytes(2, 'big'))
 
     def read_id(self):
         """ Read device ID """
-        resp = self.cmd_exec(JL_LoaderV1.CMD_FLASH_ID, b'')
+        resp = self.cmd_exec(JL_LoaderV1.Cmd.FLASH_ID, b'')
         return int.from_bytes(resp[:3], 'big')
 
     def online_device(self):
         """ Get online device (unlike V2 protocol it only returns the device type) """
-        resp = self.cmd_exec(JL_LoaderV1.CMD_GET_ONLINE_DEVICE, b'')
+        resp = self.cmd_exec(JL_LoaderV1.Cmd.GET_ONLINE_DEVICE, b'')
         return resp[0]
 
     def flash_select(self, sel):
@@ -228,11 +230,11 @@ class JL_LoaderV1(JL_MSCProtocolBase):
         0 = SPI_FLASH_CODE,
         1 = SPI_FLASH_DATA
         """
-        self.cmd_exec(JL_LoaderV1.CMD_SELECT_FLASH, bytes([sel]))
+        self.cmd_exec(JL_LoaderV1.Cmd.SELECT_FLASH, bytes([sel]))
 
     def flash_read(self, addr, size):
         """ Read flash """
-        return self.cmd_exec_datain(JL_LoaderV1.CMD_READ_FLASH,
+        return self.cmd_exec_datain(JL_LoaderV1.Cmd.READ_FLASH,
                 addr.to_bytes(4, 'big') + size.to_bytes(2, 'big'), size)
 
 
@@ -244,32 +246,33 @@ class JL_UBOOT(JL_MSCProtocolBase):
     #
     # Commands
     #
-    CMD_WRITE_MEMORY                = 0xFB06
-    CMD_READ_MEMORY                 = 0xFD07
-    CMD_JUMP_TO_MEMORY              = 0xFB08
-    CMD_WRITE_MEMORY_RXGP           = 0xFB31
+    class Cmd:
+        WRITE_MEMORY                = 0xFB06
+        READ_MEMORY                 = 0xFD07
+        JUMP_TO_MEMORY              = 0xFB08
+        WRITE_MEMORY_RXGP           = 0xFB31
 
     #-------------------------------------------#
 
     def mem_write(self, addr, data):
         """ Write memory """
-        self.cmd_exec_dataout(JL_UBOOT.CMD_WRITE_MEMORY,
+        self.cmd_exec_dataout(JL_UBOOT.Cmd.WRITE_MEMORY,
                 addr.to_bytes(4, 'big') + len(data).to_bytes(2, 'big')
                     + b'\x00' + jl_crc16(data).to_bytes(2, 'little'), data)
 
     def mem_read(self, addr, len):
         """ Read memory """
-        return self.cmd_exec_datain(JL_UBOOT.CMD_READ_MEMORY,
+        return self.cmd_exec_datain(JL_UBOOT.Cmd.READ_MEMORY,
                 addr.to_bytes(4, 'big') + len.to_bytes(2, 'big'), len)
 
     def mem_jump(self, addr, arg):
         """ Jump to memory (with argument) """
-        self.cmd_exec(JL_UBOOT.CMD_JUMP_TO_MEMORY,
+        self.cmd_exec(JL_UBOOT.Cmd.JUMP_TO_MEMORY,
                     addr.to_bytes(4, 'big') + arg.to_bytes(2, 'big'))
 
     def mem_write_rxgp(self, addr, data):
         """ Write memory (RxGp-encrypted payload, probably DVxx or DV15 specific) """
-        self.cmd_exec_dataout(JL_UBOOT.CMD_WRITE_MEMORY_RXGP,
+        self.cmd_exec_dataout(JL_UBOOT.Cmd.WRITE_MEMORY_RXGP,
                 addr.to_bytes(4, 'big') + len(data).to_bytes(2, 'big')
                     + b'\x00' + jl_crc16(data).to_bytes(2, 'little'), data)
 
@@ -281,95 +284,127 @@ class JL_LoaderV2(JL_MSCProtocolBase):
     #
     # Commands
     #
-    CMD_ERASE_FLASH_BLOCK           = 0xFB00
-    CMD_ERASE_FLASH_SECTOR          = 0xFB01
-    CMD_ERASE_FLASH_CHIP            = 0xFB02
-    CMD_READ_STATUS                 = 0xFC03
-    CMD_WRITE_FLASH                 = 0xFB04
-    CMD_READ_FLASH                  = 0xFD05
-    CMD_WRITE_MEMORY                = 0xFB06
-    CMD_READ_MEMORY                 = 0xFD07
-    CMD_JUMP_TO_MEMORY              = 0xFB08
-    CMD_READ_KEY                    = 0xFC09
-    CMD_GET_ONLINE_DEVICE           = 0xFC0A
-    CMD_READ_ID                     = 0xFC0B
-    CMD_RUN_APP                     = 0xFC0C
-    CMD_SET_FLASH_CMD               = 0xFC0D
-    CMD_FLASH_CRC16                 = 0xFC0E
-    CMD_WRITE_KEY                   = 0xFC12
-    CMD_FLASH_CRC16_RAW             = 0xFC13
-    CMD_GET_USB_BUFF_SIZE           = 0xFC14
-    CMD_GET_LOADER_VER              = 0xFC15
-    CMD_GET_MASKROM_ID              = 0xFC16
+    class Cmd:
+        ERASE_FLASH_BLOCK           = 0xFB00
+        ERASE_FLASH_SECTOR          = 0xFB01
+        ERASE_FLASH_CHIP            = 0xFB02
+        READ_STATUS                 = 0xFC03
+        WRITE_FLASH                 = 0xFB04
+        READ_FLASH                  = 0xFD05
+        WRITE_MEMORY                = 0xFB06
+        READ_MEMORY                 = 0xFD07
+        JUMP_TO_MEMORY              = 0xFB08
+        READ_KEY                    = 0xFC09
+        GET_ONLINE_DEVICE           = 0xFC0A
+        READ_ID                     = 0xFC0B
+        RUN_APP                     = 0xFC0C
+        SET_FLASH_CMD               = 0xFC0D
+        FLASH_CRC16                 = 0xFC0E
+        WRITE_KEY                   = 0xFC12
+        FLASH_CRC16_RAW             = 0xFC13
+        GET_USB_BUFF_SIZE           = 0xFC14
+        GET_LOADER_VER              = 0xFC15
+        GET_MASKROM_ID              = 0xFC16
+
+    #
+    # Device types (as returned by the GET_ONLINE_DEVICE command)
+    #
+    class DevType:
+        NONE                        = 0x00
+        SDRAM                       = 0x01
+        SD_CARD                     = 0x02
+        SPI0_NOR                    = 0x03
+        SPI0_NAND                   = 0x04
+        OTP                         = 0x05
+        SD_CARD_2                   = 0x10
+        SD_CARD_3                   = 0x11
+        SD_CARD_4                   = 0x12
+        WTW_13                      = 0x13
+        WTW_14                      = 0x14
+        WTW_15                      = 0x15
+        SPI1_NOR                    = 0x16
+        SPI1_NAND                   = 0x17
+
+    #
+    # Target device types (as specified in the loader's argument field)
+    #
+    class TargetType:
+        SDRAM                       = 0
+        SPI_NOR                     = 1
+        SPI_NAND                    = 2
+        SD_CARD                     = 3
+        SPI_NOR_2                   = 4
+        SPI_NOR_3                   = 5
+        OTP                         = 7
 
     #-------------------------------------------#
 
     def flash_erase_block(self, addr):
         """ Erase flash block """
-        resp = self.cmd_exec(JL_LoaderV2.CMD_ERASE_FLASH_BLOCK,
+        resp = self.cmd_exec(JL_LoaderV2.Cmd.ERASE_FLASH_BLOCK,
                             addr.to_bytes(4, 'big'))
         return resp[0]
 
     def flash_erase_sector(self, addr):
         """ Erase flash sector """
-        self.cmd_exec(JL_LoaderV2.CMD_ERASE_FLASH_SECTOR,
+        self.cmd_exec(JL_LoaderV2.Cmd.ERASE_FLASH_SECTOR,
                             addr.to_bytes(4, 'big'))
 
     def flash_erase_chip(self):
         """ Erase flash chip """
-        self.cmd_exec(JL_LoaderV2.CMD_ERASE_FLASH_CHIP, b'')
+        self.cmd_exec(JL_LoaderV2.Cmd.ERASE_FLASH_CHIP, b'')
 
     def read_status(self):
         """ Read status """
-        resp = self.cmd_exec(JL_LoaderV2.CMD_READ_STATUS, b'')
+        resp = self.cmd_exec(JL_LoaderV2.Cmd.READ_STATUS, b'')
         return resp[0]
 
     def flash_write(self, addr, data):
         """ Write flash """
         # Note: the CRC16 for data was only required for loaders prior to BR17 one (or something like that)
-        self.cmd_exec_dataout(JL_LoaderV2.CMD_WRITE_FLASH,
+        self.cmd_exec_dataout(JL_LoaderV2.Cmd.WRITE_FLASH,
                 addr.to_bytes(4, 'big') + len(data).to_bytes(2, 'big')
                     + b'\x00' + jl_crc16(data).to_bytes(2, 'little'), data)
 
     def flash_read(self, addr, len):
         """ Read flash """
-        return self.cmd_exec_datain(JL_LoaderV2.CMD_READ_FLASH,
+        return self.cmd_exec_datain(JL_LoaderV2.Cmd.READ_FLASH,
                 addr.to_bytes(4, 'big') + len.to_bytes(2, 'big'), len)
 
     def mem_write(self, addr, data):
         """ Write memory """
-        self.cmd_exec_dataout(JL_LoaderV2.CMD_WRITE_MEMORY,
+        self.cmd_exec_dataout(JL_LoaderV2.Cmd.WRITE_MEMORY,
                 addr.to_bytes(4, 'big') + len(data).to_bytes(2, 'big')
                     + b'\x00' + jl_crc16(data).to_bytes(2, 'little'), data)
 
     def mem_read(self, addr, len):
         """ Read memory """
-        return self.cmd_exec_datain(JL_LoaderV2.CMD_READ_MEMORY,
+        return self.cmd_exec_datain(JL_LoaderV2.Cmd.READ_MEMORY,
                 addr.to_bytes(4, 'big') + len.to_bytes(2, 'big'), len)
 
     def mem_jump(self, addr, arg=0):
         """ Jump to memory """
-        self.cmd_exec(JL_LoaderV2.CMD_JUMP_TO_MEMORY,
+        self.cmd_exec(JL_LoaderV2.Cmd.JUMP_TO_MEMORY,
                     addr.to_bytes(4, 'big') + arg.to_bytes(2, 'big'))
 
     def chip_key(self, arg=0xac6900):
         """ Read (chip)key """
-        resp = self.cmd_exec(JL_LoaderV2.CMD_READ_KEY, arg.to_bytes(4, 'big'))
+        resp = self.cmd_exec(JL_LoaderV2.Cmd.READ_KEY, arg.to_bytes(4, 'big'))
         return int.from_bytes(jl_crypt_mengli(resp[4:6][::-1]), 'little')
 
     def online_device(self):
         """ Get online device """
-        resp = self.cmd_exec(JL_LoaderV2.CMD_GET_ONLINE_DEVICE, b'')
+        resp = self.cmd_exec(JL_LoaderV2.Cmd.GET_ONLINE_DEVICE, b'')
         return {'type': resp[0], 'id': int.from_bytes(resp[2:6], 'little')}
 
     def read_id(self):
         """ Read ID """
-        resp = self.cmd_exec(JL_LoaderV2.CMD_READ_ID, b'')
+        resp = self.cmd_exec(JL_LoaderV2.Cmd.READ_ID, b'')
         return int.from_bytes(resp[0:3], 'big')
 
     def run_app(self, arg=1):
         """ Run app (or reset) """
-        self.cmd_exec(JL_LoaderV2.CMD_RUN_APP, arg.to_bytes(4, 'big'))
+        self.cmd_exec(JL_LoaderV2.Cmd.RUN_APP, arg.to_bytes(4, 'big'))
 
     def set_flash_cmds(self, cmds):
         """ Set flash commands, cmds in order:
@@ -383,40 +418,40 @@ class JL_LoaderV2(JL_MSCProtocolBase):
             [7] = Write status register command    (e.g. 0x01)
         """
 
-        self.cmd_exec_datain(JL_LoaderV2.CMD_SET_FLASH_CMD,
+        self.cmd_exec_datain(JL_LoaderV2.Cmd.SET_FLASH_CMD,
             b'\x00\x00\x00\x00' + len(cmds).to_bytes(2, 'big'), bytes(cmds))
 
     def flash_crc16(self, addr, len):
         """ Calculate flash CRC16 (special) """
-        resp = self.cmd_exec(JL_LoaderV2.CMD_FLASH_CRC16,
+        resp = self.cmd_exec(JL_LoaderV2.Cmd.FLASH_CRC16,
                         addr.to_bytes(4, 'big') + len.to_bytes(2, 'big'))
         return int.from_bytes(resp[:2], 'big')
 
     def write_chipkey(self, key):
         """ Write (chip)key """
-        resp = self.cmd_exec(JL_LoaderV2.CMD_WRITE_KEY,
+        resp = self.cmd_exec(JL_LoaderV2.Cmd.WRITE_KEY,
                                                 key.to_bytes(4, 'big'))
         return int.from_bytes(resp[:4], 'big')
 
     def flash_crc16_raw(self, addr, len):
         """ Calculate flash CRC16 (raw) """
-        resp = self.cmd_exec(JL_LoaderV2.CMD_FLASH_CRC16_RAW,
+        resp = self.cmd_exec(JL_LoaderV2.Cmd.FLASH_CRC16_RAW,
                         addr.to_bytes(4, 'big') + len.to_bytes(2, 'big'))
         return int.from_bytes(resp[:2], 'big')
 
     def usb_buffer_size(self):
         """ Get USB buffer size (aka get max flash page size) """
-        resp = self.cmd_exec(JL_LoaderV2.CMD_GET_USB_BUFF_SIZE, b'')
+        resp = self.cmd_exec(JL_LoaderV2.Cmd.GET_USB_BUFF_SIZE, b'')
         return int.from_bytes(resp[:4], 'big')
 
     def version(self):
         """ Get loader version """
         # Sometimes the cmd in response is wrong... FIXME
-        rcmd, resp = self.cmd_exec(JL_LoaderV2.CMD_GET_LOADER_VER, b'', check_response=False)
+        rcmd, resp = self.cmd_exec(JL_LoaderV2.Cmd.GET_LOADER_VER, b'', check_response=False)
         return str(resp[1:5][::-1], 'ascii')
 
     def maskrom_id(self):
         """ Get MaskROM ID """
-        resp = self.cmd_exec(JL_LoaderV2.CMD_GET_MASKROM_ID, b'')
+        resp = self.cmd_exec(JL_LoaderV2.Cmd.GET_MASKROM_ID, b'')
         return int.from_bytes(resp[:4], 'big')
 
