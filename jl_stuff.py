@@ -1,6 +1,11 @@
 import crcmod
 
-jl_crc16 = crcmod.mkCrcFun(0x11021, rev=False, initCrc=0x0000, xorOut=0x0000)
+#------------------------------------------------
+
+jl_crc16 = crcmod.mkCrcFun(0x11021,     initCrc=0x0000,     rev=False)
+jl_crc32 = crcmod.mkCrcFun(0x104C11DB7, initCrc=0x26536734, rev=True)
+
+#------------------------------------------------
 
 def jl_crypt_enc(data, key=0xffff):
     data = bytearray(data)
@@ -37,28 +42,33 @@ def jl_crypt_rxgp(data):
 #------------------------------------------------
 
 def hexdump(data, width=16, address=0):
-    for i in range(0, len(data), width):
-        s = '%8X: ' % (i + address)
+    for off in range(0, len(data), width):
+        line = data[off:off+width]
 
-        for j in range(width):
-            if (i+j) < len(data):
-                s += '%02X ' % data[i+j]
+        #
+        # Make a hex line
+        #
+        hexline = ''
+        for i in range(width):
+            if (i % 8) == 0:
+                hexline += ' '
+
+            if i >= len(line):
+                hexline += '-- '
             else:
-                s += '-- '
+                hexline += '%02x ' % line[i]
 
-        s += ' |'
+        #
+        # Make a text line
+        #
+        line = bytearray(line + (b' ' * (width - len(line))))
+        for i, b in enumerate(line):
+            if b < 0x20: # or b >= 0x7F:
+                line[i] = ord('.')
 
-        for j in range(width):
-            if (i+j) < len(data):
-                c = data[i+j]
-                if c < 0x20 or c >= 0x7f: c = ord('.')
-                s += chr(c)
-            else:
-                s += ' '
+        txtline = line.decode('1251', errors='replace')  # 1251 rocks!
 
-        s += '|'
-
-        print(s)
+        print('%08x:%s %s' % (off+address, hexline, txtline))
 
 #------------------------------------------------
 
