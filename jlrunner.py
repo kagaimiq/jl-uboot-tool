@@ -1,6 +1,6 @@
 from jl_stuff import *
 from jl_uboot import JL_MSCDevice, JL_UBOOT
-import argparse
+import argparse, struct
 
 ap = argparse.ArgumentParser(description='Load code into memory and execute it')
 
@@ -20,7 +20,10 @@ ap.add_argument('--encrypt', action='store_true',
 
 ap.add_argument('--block-size', default='512', metavar='SIZE',
                 help="Size of the block that is used when transferring data to the chip. (default = %(default)s)"
-                     " Please keep in mind that the encrypted loaders usually use a block size of 512 bytes. ")
+                     " Please keep in mind that encrypted loaders usually use a block size of 512 bytes. ")
+
+ap.add_argument('--mitraddr', type=anyint,
+                help='Address of the "MiZUTraX" thing to dump after execution')
 
 ap.add_argument('address', type=anyint,
                 help="Address where the file will be loaded and executed from")
@@ -29,6 +32,7 @@ ap.add_argument('file',
                 help="File that will be loaded and executed")
 
 args = ap.parse_args()
+
 
 if args.device is not None:
     device = args.device
@@ -40,9 +44,21 @@ else:
     if device is None:
         exit(1)
 
+
 with JL_MSCDevice(device) as dev:
     # TODO, determine whether we are in UBOOT1.00 or Loader/UBOOT2.00 modes
     uboot = JL_UBOOT(dev.dev)
+
+    def mem_read(addr, size):
+        data = uboot.mem_read(addr, size)
+        if args.encrypt: data = jl_crypt_mengli(data)
+        return data
+
+    def mem_write(addr, data):
+        if args.encrypt: data = jl_crypt_mengli(data)
+        uboot.mem_write(addr, data)
+
+    #----------------------------------------------------
 
     with open(args.file, 'rb') as f:
         addr = args.address
@@ -51,10 +67,42 @@ with JL_MSCDevice(device) as dev:
             block = f.read(int(args.block_size, 0))
             if block == b'': break
 
-            if args.encrypt:
-                block = jl_crypt_mengli(block)
-
-            uboot.mem_write(addr, block)
+            mem_write(addr, block)
             addr += len(block)
 
+    #----------------------------------------------------
+
+    try:
         uboot.mem_jump(args.address, args.arg)
+    except Exception as e:
+        print('Something failed during execution, is your code running too long or locking up the USB code, or what?')
+        print('Message:', e)
+        exit(1)
+
+    #----------------------------------------------------
+
+    def mitrparse(addr):
+        magic, buffaddr, buffsize, nbytes = struct.unpack('<8sIII', mem_read(addr, 8+12))
+
+        if magic != b'MiZUTraX':
+            print("!!! There isn't any MizuTrax out there!")
+            return
+
+        print('////////// MiZU TraX LogTrace thingy //////////')
+
+        print('Data spans %x-%x (%d bytes long), total data written: %d bytes' % (buffaddr, buffaddr + buffsize - 1, buffsize, nbytes))
+
+        data = mem_read(buffaddr, min(buffsize, nbytes))
+
+        if nbytes > buffsize:
+            splitpos = nbytes % buffsize
+            data = data[splitpos:] + data[:splitpos]
+            print('## %d bytes left the scene' % (nbytes - buffsize))
+
+        print('============= The Data =============')
+        print(data.decode('utf-8', errors='ignore'))
+        print('====================================')
+
+    if args.mitraddr:
+        mitrparse(args.mitraddr)
+
