@@ -7,36 +7,39 @@ jl_crc32 = crcmod.mkCrcFun(0x104C11DB7, initCrc=0x26536734, rev=True)
 
 #------------------------------------------------
 
-def jl_crypt_enc(data, key=0xffff):
-    data = bytearray(data)
-
-    for i in range(len(data)):
-        data[i] ^= key & 0xff
+def jl_crypt_enc_in(buff, offset, size, key=0xFFFF):
+    for i in range(size):
+        buff[offset+i] ^= key & 0xff
         key = ((key << 1) ^ (0x1021 if (key >> 15) else 0)) & 0xffff
 
+def jl_crypt_yulin_in(buff, offset, size, key=0xFFFFFFFF):
+    crc = jl_crc16(int.to_bytes(key >> 16, 2, 'little'), key & 0xffff)
+    magic = bytes("孟黎我爱你，玉林", "gb2312")
+
+    for i in range(size):
+        mi = i % len(magic)
+        crc = jl_crc16(magic[mi:mi+1], crc)
+        buff[offset+i] ^= crc & 0xff
+
+def jl_crypt_rxgp_in(buff, offset, size):
+    rng = 0x70477852    # "RxGp"
+    for i in range(size):
+        rng = (rng * 16807) + (rng // 127773) * -0x7fffffff
+        buff[offset+i] ^= rng & 0xff
+
+def jl_crypt_enc(data, key=0xffff):
+    data = bytearray(data)
+    jl_crypt_enc_in(data, 0, len(data), key)
     return bytes(data)
 
 def jl_crypt_mengli(data, key=0xffffffff):
-    crc = key & 0xffff
-    crc = jl_crc16(bytes([key >> 16 & 0xff, key >> 24 & 0xff]), crc)
-
-    magic = bytes("孟黎我爱你，玉林", "gb2312")
     data = bytearray(data)
-
-    for i in range(len(data)):
-        crc = jl_crc16(bytes([magic[i % len(magic)]]), crc)
-        data[i] ^= crc & 0xff
-
+    jl_crypt_yulin_in(data, 0, len(data), key)
     return bytes(data)
 
 def jl_crypt_rxgp(data):
     data = bytearray(data)
-    aboba = 0x70477852 # 'RxGp' / 'pGxR'
-
-    for i in range(len(data)):
-        aboba = (aboba * 16807) + (aboba // 127773) * -0x7fffffff
-        data[i] ^= aboba & 0xff
-
+    jl_crypt_rxgp_in(data, 0, len(data))
     return data
 
 #------------------------------------------------
@@ -69,16 +72,3 @@ def hexdump(data, width=16, address=0):
         txtline = line.decode('1251', errors='replace')  # 1251 rocks!
 
         print('%08x:%s %s' % (off+address, hexline, txtline))
-
-#------------------------------------------------
-
-if __name__ == '__main__':
-    with open('loaderblobs/usb/dv15loader.enc', 'rb') as f:
-        while True:
-            blk = f.read(512)
-            if blk == b'': break
-            hexdump(jl_crypt_rxgp(blk))
-
-    dat = jl_crypt_rxgp(b'Helvetica standard 2606 JIELI TECHNOLOGY -> SCIENCE PREPARATION ROOM (nakamura)\xff')
-    hexdump(dat)
-    hexdump(jl_crypt_rxgp(dat))

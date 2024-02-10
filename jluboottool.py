@@ -1,11 +1,11 @@
 from jl_stuff import *
-from jl_uboot import JL_MSCDevice, JL_UBOOT, JL_LoaderV2
+from jl_uboot import JL_MSCDevice, JL_UBOOT, JL_LoaderV2, JL_LoaderV1
 from scsiio.common import SCSIException
 import argparse, cmd, time
 import pathlib, yaml
 
 ap = argparse.ArgumentParser(description='JieLi UBOOT tool - the swiss army knife for JieLi technology',
-                             epilog='// nemol-main.mod, modarchiveid:93339')
+                             epilog="// it's not that great, actually.")
 
 def anyint(s):
     return int(s, 0)
@@ -25,9 +25,6 @@ ap.add_argument('--custom-loaders', metavar='FILE',
                 help='Path to the custom loader spec YAML file. ' +
                      'If something goes wrong when loading it, then the builtin loader spec is used.')
 
-ap.add_argument('--force-loader', action='store_true',
-                help="Run the loader even when it's not needed")
-
 args = ap.parse_args()
 
 ###### ###### ###### ###### ###### ###### ###### ###### ###### ###### ######
@@ -43,6 +40,7 @@ print('** %d chips, %d USB loaders, %d UART loaders **' % (len(JL_chips), len(JL
 
 ###### ###### ###### ###### ###### ###### ###### ###### ###### ###### ######
 
+# XXX: this is specific to V2 loaders.
 dev_type_strs = {
     0x00: 'None',
     0x01: 'SDRAM',
@@ -60,6 +58,8 @@ dev_type_strs = {
     0x17: 'SPI NOR flash on SPI1',
 }
 
+
+
 def makebar(ratio, length):
     bratio = int(ratio * length)
 
@@ -73,46 +73,50 @@ def makebar(ratio, length):
 
     return bar
 
+
+#
+# Well, yeah, that's cool but do we really need this?
+#
 def print_largeletters(string):
     string = string.upper()
 
     chars = {
-        '0': ('  _____ ', ' |   / |', ' |  /  |', ' |_/___|'),
-        '1': ('    _   ', '   /|   ', '    |   ', '  __|__ '),
-        '2': ('  _____ ', ' |     |', '  _____|', ' |______'),
-        '3': ('  _____ ', '    ___|', '       |', ' ______|'),
-        '4': ('        ', ' |    | ', ' |____|_', '      | '),
-        '5': ('  ______', ' |_____ ', '       |', ' ______|'),
-        '6': ('  ______', ' |_____ ', ' |     |', ' |_____|'),
-        '7': ('  _____ ', ' |     |', '       |', '       |'),
-        '8': ('  _____ ', ' |_____|', ' |     |', ' |_____|'),
-        '9': ('  _____ ', ' |     |', ' |_____|', ' ______|'),
-        'A': ('  _____ ', ' |_____|', ' |     |', ' |     |'),
-        'B': ('  ______', ' |_____/', ' |     |', ' |_____|'),
-        'C': ('  _____ ', ' |     |', ' |      ', ' |______'),
-        'D': ('  _____ ', ' |     |', ' |     |', ' |____/ '),
-        'E': ('  ______', ' |_____ ', ' |      ', ' |______'),
-        'F': ('  ______', ' |_____ ', ' |      ', ' |      '),
-        'G': ('  _____ ', ' |      ', ' |  ___ ', ' |_____|'),
-        'H': ('        ', ' |_____|', ' |     |', ' |     |'),
-        'I': (' _______', '    |   ', '    |   ', ' ___|___'),
-        'J': ('    ___ ', '       |', '       |', ' |_____|'),
-        'K': ('        ', ' |___/  ', ' |   \  ', ' |     \\'),
-        'L': ('        ', ' |      ', ' |      ', ' |_____|'),
-        'M': (' ______ ', ' |  |  |', ' |     |', ' |     |'),
-        'N': ('        ', ' |\    |', ' |  \  |', ' |    \|'),
-        'O': ('  _____ ', ' |     |', ' |     |', ' |_____|'),
-        'P': ('  ______', ' |_____/', ' |      ', ' |      '),
-        'Q': ('  _____ ', ' |     |', ' |   \ |', ' |____\|'),
-        'R': ('  ______', ' |_____/', ' |     |', ' |     |'),
-        'S': (' _______', ' \_____ ', '       |', ' ______|'),
-        'T': (' _______', '    |   ', '    |   ', '    |   '),
-        'U': ('        ', ' |     |', ' |     |', ' |_____|'),
-        'V': ('        ', ' |     |', '  \   / ', '   \_/  '),
-        'W': ('        ', ' |     |', ' |  |  |', ' |__|__|'),
-        'X': ('        ', ' \     /', '  >---< ', ' /     \\'),
-        'Y': ('        ', ' |     |', ' |_____|', ' ______|'),
-        'Z': (' _______', '    ___/', '   /    ', ' _/_____'),
+        '0': (r'  _____ ', r' |   / |', r' |  /  |', r' |_/___|'),
+        '1': (r'    _   ', r'   /|   ', r'    |   ', r'  __|__ '),
+        '2': (r'  _____ ', r' |     |', r'  _____|', r' |______'),
+        '3': (r'  _____ ', r'    ___|', r'       |', r' ______|'),
+        '4': (r'        ', r' |    | ', r' |____|_', r'      | '),
+        '5': (r'  ______', r' |_____ ', r'       |', r' ______|'),
+        '6': (r'  ______', r' |_____ ', r' |     |', r' |_____|'),
+        '7': (r'  _____ ', r' |     |', r'       |', r'       |'),
+        '8': (r'  _____ ', r' |_____|', r' |     |', r' |_____|'),
+        '9': (r'  _____ ', r' |     |', r' |_____|', r' ______|'),
+        'A': (r'  _____ ', r' |_____|', r' |     |', r' |     |'),
+        'B': (r'  ______', r' |_____/', r' |     |', r' |_____|'),
+        'C': (r'  _____ ', r' |     |', r' |      ', r' |______'),
+        'D': (r'  _____ ', r' |     |', r' |     |', r' |____/ '),
+        'E': (r'  ______', r' |_____ ', r' |      ', r' |______'),
+        'F': (r'  ______', r' |_____ ', r' |      ', r' |      '),
+        'G': (r'  _____ ', r' |      ', r' |  ___ ', r' |_____|'),
+        'H': (r'        ', r' |_____|', r' |     |', r' |     |'),
+        'I': (r' _______', r'    |   ', r'    |   ', r' ___|___'),
+        'J': (r'    ___ ', r'       |', r'       |', r' |_____|'),
+        'K': (r'        ', r' |___/  ', r' |   \  ', r' |     \\'),
+        'L': (r'        ', r' |      ', r' |      ', r' |_____|'),
+        'M': (r' ______ ', r' |  |  |', r' |     |', r' |     |'),
+        'N': (r'        ', r' |\    |', r' |  \  |', r' |    \|'),
+        'O': (r'  _____ ', r' |     |', r' |     |', r' |_____|'),
+        'P': (r'  ______', r' |_____/', r' |      ', r' |      '),
+        'Q': (r'  _____ ', r' |     |', r' |   \ |', r' |____\|'),
+        'R': (r'  ______', r' |_____/', r' |     |', r' |     |'),
+        'S': (r' _______', r' \_____ ', r'       |', r' ______|'),
+        'T': (r' _______', r'    |   ', r'    |   ', r'    |   '),
+        'U': (r'        ', r' |     |', r' |     |', r' |_____|'),
+        'V': (r'        ', r' |     |', r'  \   / ', r'   \_/  '),
+        'W': (r'        ', r' |     |', r' |  |  |', r' |__|__|'),
+        'X': (r'        ', r' \     /', r'  >---< ', r' /     \\'),
+        'Y': (r'        ', r' |     |', r' |_____|', r' ______|'),
+        'Z': (r' _______', r'    ___/', r'   /    ', r' _/_____'),
     }
 
     height = 0
@@ -145,7 +149,7 @@ class DasShell(cmd.Cmd):
   |       / / / /       |        - Das Shell -           |
   |  __  / / / /        `------------------------------. |
   | / /_/ / / /____        -*- JieLi tech console -*-  | |
-  | \____/ /______/       Type 'help' or '?' for help. | |
+  | `____/ /______/       Type 'help' or '?' for help. | |
   |                     `------------------------------' |
   `------------------------------------------------------'
     """
@@ -159,7 +163,6 @@ class DasShell(cmd.Cmd):
             self.buffsize = self.dev.usb_buffer_size()
         except:
             self.buffsize = 512
-
 
     def emptyline(self):
         pass
@@ -182,18 +185,18 @@ class DasShell(cmd.Cmd):
             print("Failed to get the chip key")
             return
 
-        print('Your chip key is...')
+        print('Your chip key is:')
 
         print_largeletters('%04X' % key)
 
         if key == 0xffff:
-            print("All bits are nice and clean! You're good to go!")
+            print("Chip key is blank! You're good to go.")
         elif key == 0x0000:
-            print("All bits of your chipkey seems to be burnt out!")
-            print("Maybe something gone wrong? Or this is what it should be?")
+            print("Chip key bits seem to be fully burnt out.")
+            print("Did something go wrong? Or that's what it is supposed to be?")
         else:
             nbits = bin(key).count('1')
-            print("There are %d bits intact!" % nbits)
+            print("- %d bits are still intact." % nbits)
 
     def do_burnchipkey(self, args):
         """ Burn the chipkey into the chip
@@ -232,12 +235,12 @@ class DasShell(cmd.Cmd):
         #
         if key == 0x0000:
             if newkey == 0xffff:
-                print("I think there's no way to escape this. Do you wanna try?")
+                print("You think you can restore this back to normal?")
             elif newkey == 0x0000:
                 print("Well, everything is burnt down already. So there's nothing to do.")
                 return
             else:
-                print("Your chipkey seems to be all burnt down. Do you think you can do something with that?")
+                print("Your chipkey seems to be fully burnt out, you think you can do something about it?")
 
         elif key == 0xffff:
             if newkey == 0xffff:
@@ -258,7 +261,7 @@ class DasShell(cmd.Cmd):
                 print("Oh, so you want to burn the remaining bits to death? Do you?")
 
             elif key == newkey:
-                print("This chipkey is already burnt. So there's nothing to do.")
+                print("This chipkey is already burnt into the chip.")
                 return
 
             else:
@@ -268,11 +271,12 @@ class DasShell(cmd.Cmd):
                 else:
                     print("Well, this key won't be written as you think it will.")
 
-                    print("So that's what you get instead:")
+                    print("That's what you get instead:")
                     print_largeletters('%04X' % realkey)
 
                     print("\nDo you still want to proceed?")
 
+        # silly approach to confirming a possibly-dangerous task.
         answer = input('Say "yes i do" to proceed: ')
         if answer.strip().lower() != 'yes i do':
             print("You didn't answer correctly. Aborting")
@@ -284,7 +288,8 @@ class DasShell(cmd.Cmd):
             print("Failed to burn chipkey!")
             return
 
-        print("Result: 0x%08x" % result)
+        print("Command result: 0x%08x" % result)
+        print("Current chipkey: %04x" % self.dev.chip_key())
 
     def do_onlinedev(self, args):
         """Get the device type and info we're working with
@@ -302,7 +307,7 @@ class DasShell(cmd.Cmd):
         print_largeletters('%08X' %  info['id'])
 
     def do_execcmd(self, args):
-        """Execute an arbitrary loader command
+        """Execute an arbitrary loader command (those which do not transfer any data, but simply return a response)
         execcmd <opcode> [<arg bytes>]
         """
 
@@ -681,7 +686,6 @@ class DasShell(cmd.Cmd):
 
             print()
 
-
     #-------------------------------------
 
     def do_memdump(self, args):
@@ -720,10 +724,48 @@ class DasShell(cmd.Cmd):
             address += n
             length -= n
 
+    #-------------------------------------
+
+    def memjump(self, args):
+        """Execute code at a given address
+        memjump <addr> [<arg>]
+        
+        [<arg>] specifies an 16-bit integer which is passed to the
+        code in its loader parameters structure, if any is supported by the chip or its loader.
+        If it is not specified, it defaults to 0
+        """
+
+        args = args.split(maxsplit=2)
+
+        if len(args) < 1:
+            print("Not enough arguments!")
+            self.do_help('memjump')
+            return
+
+        try:
+            address = int(args[0], 0)
+        except ValueError:
+            print("<address> [%s] is not a number!" % args[0])
+            return
+
+        try:
+            arg = int(args[1], 0)
+        except IndexError:
+            arg = 0
+        except ValueError:
+            print("<arg> [%s] is not a number!" % args[1])
+            return
+
+        try:
+            self.dev.mem_jump(address, arg)
+        except SCSIException as e:
+            print('Something failed while executing code.')
+            print(e)
+
     #------#------#------#------#------#------#------#------#------#------#
 
     def do_reset(self, args):
-        """Reset the chip. (or Run App)
+        """Reset the chip. (or "Run App")
         reset [<arg>]
 
         If <arg> is not specified, then it will default to 1.
@@ -762,24 +804,24 @@ with JL_MSCDevice(device) as dev:
 
     chipname = vendor.lower()
     if chipname not in JL_chips:
-        print("Oh well, chip %s is either not supported or is invalid." % chipname)
+        print("Chip '%s' is not supported, or it is invalid." % chipname)
         exit(2)
 
+    print()
+
     chipspec = JL_chips[chipname]
-    print('Chip: %s (%s)' % (chipname.upper(), ', '.join(chipspec['name'])))
+    print('Chip: %s (%s series)' % (chipname.upper(), ', '.join(chipspec['name'])))
 
-    #print_largeletters(chipname)
-
+    #
+    # Load the loader.
+    #   TODO: MUST be moved out somewhere, in order to reuse this in other tools as well.
+    #
     uboot = JL_UBOOT(dev.dev)
 
     runtheloader = False
 
-    if args.force_loader:
-        print("Will run the loader regardless of whether it is needed or not.")
-        runtheloader = True
-
-    elif product == 'UBOOT1.00':
-        print("This is the UBOOT1.00 device, so we'll run the loader.")
+    if product == 'UBOOT1.00':
+        print("This is a UBOOT1.00 device, running the loader.")
         runtheloader = True
 
     if runtheloader:
@@ -816,8 +858,6 @@ with JL_MSCDevice(device) as dev:
         # If we didn't load the custom loader specs, then try to use the builtin one..
         #
         if custom_loaderspecs is None:
-            print("Using the builtin loader specs")
-
             if chipname not in JL_usb_loaders:
                 print("There is no USB loader for chip %s" % chipname)
                 exit(3)
@@ -889,7 +929,6 @@ with JL_MSCDevice(device) as dev:
                 addr += len(block)
 
         if 'argument' not in loaderspec:
-            print('This loader does not seem to have a default argument.')
             loaderspec['argument'] = (0<<12) | (4<<4) | (1<<0) # spi mode=0, div=4, mem=1 (spi nor)
 
         if args.loader_arg is not None:
@@ -903,67 +942,78 @@ with JL_MSCDevice(device) as dev:
 
         try:
             uboot.mem_jump(loaderspec['entry'], loaderspec['argument'])
-            print("Loader runs successfully.")
+            print("Loader ran successfully.")
         except SCSIException:
-            print("Failed to run loader.")
-
-    print()
-
-    #
-    # Let's try to gather some info beforehand
-    #
+            print("!! Failed to run the loader !!")
+            exit(3)
 
     loader = JL_LoaderV2(dev.dev)
 
-    print(".-----------------.------------------------------------------------")
-    print("| Quick info      : %s (%s)" % (chipname.upper(), '/'.join(chipspec['name'])))
-    print("|-----------------:------------------------------------------------")
+    #
+    # Print some quick info summary
+    #
 
-    try:
-        odev = loader.online_device()
-        print("| Online device   : id: 0x%06x, type: %d (%s)"
-                    % (odev['id'], odev['type'], dev_type_strs.get(odev['type'], 'unknown')))
-    except SCSIException:
-        pass #print("(!) Failed to get online device info")
+    print()
+    print('================ Quick info ==================')
+    print('  ** %s (%s series) **' % (chipname.upper(), '/'.join(chipspec['name'])))  # redundant?
+    if isinstance(loader, JL_LoaderV2):
+        print('  Loader protocol: V2')
 
-    try:
-        print("| Chip key        : 0x%04X" % loader.chip_key())
-    except SCSIException:
-        pass #print("(!) Failed to get chip key")
+        try:
+            print('  >> Chip key: 0x%04X <<' % loader.chip_key())
+        except SCSIException:
+            pass
 
-    try:
-        print("| USB buffer size : %d bytes" % loader.usb_buffer_size())
-    except SCSIException:
-        pass #print("(!) Failed to get USB buffer size")
+        try:
+            print('  - USB buffer size: %d bytes' % loader.usb_buffer_size())
+        except SCSIException:
+            pass
 
-    #try:
-    #    print("| Status          : 0x%02x" % loader.read_status())
-    #except SCSIException:
-    #    pass #print("(!) Failed to read status")
+        try:
+            ondev = loader.online_device()
+            print('  - Online device:')
+            print('     ID: 0x%06x' % ondev['id'])
+            print('     Type: 0x%02x (%s)' % (ondev['type'], dev_type_strs.get(ondev['type'], 'unknown')))
+        except SCSIException:
+            pass
 
-    #try:
-    #    print("| Device ID       : 0x%06x" % loader.read_id())
-    #except SCSIException:
-    #    pass #print("(!) Failed to read device ID")
+        try:
+            print('  - Another Device ID: 0x%08x' % loader.read_id())
+        except SCSIException:
+            pass
 
-    #try:
-    #    print("| Loader version  : %s" % loader.version())
-    #except SCSIException:
-    #    pass #print("(!) Failed to get loader version")
+        #try:
+        #    print('  - Status: 0x%02x' % loader.read_status())
+        #except SCSIException:
+        #    pass
 
-    #try:
-    #    print("| MaskROM ID      : 0x%08x" % loader.maskrom_id())
-    #except SCSIException:
-    #    pass #print("(!) Failed to get MaskROM ID")
+        #try:
+        #    print('  - MaskROM ID: 0x%08x' % loader.maskrom_id())
+        #except SCSIException:
+        #    pass
 
-    print("`-----------------'------------------------------------------------")
+    elif isinstance(loader, JL_LoaderV1):
+        print('  Loader protocol: V1')
+
+        try:
+            print('  - Device ID: 0x%08x' % loader.read_id())
+        except SCSIException:
+            pass
+
+        try:
+            print('  - Device type: 0x%02x' % loader.online_device())
+        except SCSIException:
+            pass
+
+    elif isinstance(loader, JL_UBOOT):
+        print('  Loader protocol: V2 MaskROM')
+
+    print('==============================================')
+
 
     #
     # Let's enter the shell!
     #
     ds = DasShell(loader)
-
-    #ds.onecmd('onlinedev')
-    #ds.onecmd('chipkey')
 
     ds.cmdloop()
