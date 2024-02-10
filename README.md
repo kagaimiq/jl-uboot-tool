@@ -50,12 +50,12 @@ Chip series it's currently aware of is listed below:
 | CD03   | AC410N                | n/a           | different protocol |
 | BT15   | AC460N                | maybe working |                    |
 | BC51   | AC461N                | maybe working |                    |
-| DV12   | AC520N                | maybe working | maybe it worked?   |
-| DV15   | AC521N                | n/a           | some troubles with uploading the loader |
+| DV12   | AC520N                | maybe working | not working?       |
+| DV15   | AC521N                | Working       |                    |
 | DV16   | AC540N/AC560N         | unknown       |                    |
 | SH54   | AD14N/AD104N          | unknown       |                    |
 | SH55   | AD15N/AD105N          | n/a           | UART loader only   |
-| UC03   | AD16N                 | unknown       | loader is in some strange format |
+| UC03   | AD16N                 | unknown       | loader was in some weird format |
 | BD19   | AC632N                | unknown       |                    |
 | BD29   | AC630N                | unknown       |                    |
 | BR17   | AC690N                | Working       |                    |
@@ -64,14 +64,14 @@ Chip series it's currently aware of is listed below:
 | BR22   | AC693N                | maybe working |                    |
 | BR23   | AC695N/AC635N         | Working       |                    |
 | BR25   | AC696N/AC636N/AC608N  | Working       |                    |
-| BR28   | AC701N                | unknown       |                    |
-| BR30   | (AC/AD/JL)697N/AC897N | unknown       |                    |
-| BR34   | AC638N/AD698N         | unknown       |                    |
+| BR28   | AC701N                | seems to work |                    |
+| BR30   | (AC/AD/JL)697N/AC897N | seems to work |                    |
+| BR34   | AC638N/AD698N         | seems to work |                    |
 | BR36   | (AC/JL)700N           | n/a           | no loaders for it yet |
 | WL80   | AC790N                | unknown       |                    |
 | WL82   | AC791N                | unknown       |                    |
 
-There are rumors stating that the newer chip series' UBOOT1.00 has the CRC in the memory write command in big-endian (as opposed to a little-endian one), thus currently it won't work as the CRCs are send in little-endian. More research needed..
+There are rumors stating that the newer chip series' UBOOT1.00 has the CRC in the memory write command in big-endian (as opposed to a little-endian one), thus currently it won't work as the CRCs are send in little-endian. More research needed.. OR maybe they simply ignore the CRC?
 
 ## See also
 
