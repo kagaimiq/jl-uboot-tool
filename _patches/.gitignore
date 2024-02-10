@@ -1,6 +1,0 @@
-*.elf
-*.lst
-*.o
-*.bin
-
-!patched.bin
