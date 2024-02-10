@@ -171,9 +171,7 @@ Writes data into a specified memory location.
 #### UBOOT1.00 note
 
 Some chip's UBOOT1.00 implementation (starting from BR23 or so) accept the data in the MengLi-encrypted form. This is implemented by writing data into the target location and then decrypting it at the place.
-However the loaders for the same chips don't decrypt data! 
-
-In some chips (starting from BR28 or so) the CRC argument is in big-endian instead of little-endian!
+However the loaders for the same chips don't decrypt data! Also they seem to ignore the CRC argument completely!!
 
 ### Read memory
 

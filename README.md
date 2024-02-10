@@ -71,8 +71,6 @@ Chip series it's currently aware of is listed below:
 | WL80   | AC790N                | unknown       |                    |
 | WL82   | AC791N                | unknown       |                    |
 
-There are rumors stating that the newer chip series' UBOOT1.00 has the CRC in the memory write command in big-endian (as opposed to a little-endian one), thus currently it won't work as the CRCs are send in little-endian. More research needed.. OR maybe they simply ignore the CRC?
-
 ## See also
 
 - [What is UBOOT](docs/what-is-uboot.md)
