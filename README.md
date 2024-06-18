@@ -1,7 +1,11 @@
 # JieLi UBOOT tool
 
-JieLi chip flasher/dumper and etc. using the USB download "UBOOT" protocol
-or the UART download protocol (not implemented yet.)
+A JieLi chip dumper and flasher.
+
+*Note that this repo has gone pretty trashed over the time so I think I'll probably make a different "well-designed" JieLi tool sometimes in the future if I'll have enough motivation to do so. (something like [bluetrum-tools](https://github.com/kagaimiq/bluetrum-tools), perhaps)*
+
+See [jl-misctools](https://github.com/kagaimiq/jl-misctools) for some firmware-related utils.
+See [jielie](https://github.com/kagaimiq/jielie) to get familiar with the chips.
 
 ## Tools
 
@@ -25,7 +29,7 @@ Here is an overview of some important commands:
 
 ### jlrunner.py
 
-A simple script that loads a code binary into RAM and executes it with optionally given argument.
+A simple script that loads a code binary into RAM and executes it with an optionally given numeric argument.
 
 ### jldevfind.py
 
@@ -35,6 +39,14 @@ i.e. the ones that start with "UBOOT", "UDISK" or "DEVICE"
 It is also used to find and choose devices when no '--device' argument was given.
 (until a proper solution is found)
 
+## Determining the size of a flash chip
+
+Since currently I haven't bothered to rip some SPI flash database (or make my own, at least with some basic entries representing most of the SPI flash chips used in chips -- or just a very basic size calculation relying on the flash chip ID, like I did in my very first JL dumper tool), if you want to dump the whole flash you have to examine the correct size by yourself.
+
+- If you look at the chip (provided you have a legitimate JL chip, and not a rebrand), specifically at the very end of the marking, you should see a number. This number represents the size of a flash chip in megabits. Sometimes this may be not a number so you should better rely on a different method below.
+- The flash ID universally contains a density code encoded as a log2 of the actual size in the last byte of the ID; e.g. for `0x856014` it's `0x14`, in decimal that would be 20, so `2^20` evaluates to `1048576` or 1 MiB. Thus the size parameter is going to be `1048576` or `0x100000` hex
+- In case of an external flash (e.g. in AC5xxx series or the flash-less AD14N variants) you can just look up that flash instead.
+
 ## Supported chips
 
 Realistically you can expect it to work with the AC690-AC696N series chips (BR17-BR25), for now.
@@ -43,7 +55,7 @@ Other chips have some quirks in the protocol (compared to the on in the chips li
 
 Some (e.g. AC410N) have a completely different protocol (command set), thus it is also out of question right now.
 
-Chip series it's currently aware of is listed below:
+Chip series it's currently aware of are listed below:
 
 | Family | Series                | Status        | Notes              |
 |--------|-----------------------|---------------|--------------------|
