@@ -1,14 +1,12 @@
-from jl_stuff import *
-from jl_uboot import JL_MSCDevice, JL_UBOOT, JL_LoaderV2, JL_LoaderV1
 from scsiio.common import SCSIException
+from jltech.uboot import JL_MSCDevice, JL_UBOOT, JL_LoaderV2, JL_LoaderV1
+from jltech.cipher import cipher_bytes, jl_crc_cipher, jl_rxgp_cipher
+from jltech.utils import *
 import argparse, cmd, time
 import pathlib, yaml
 
 ap = argparse.ArgumentParser(description='JieLi UBOOT tool - the swiss army knife for JieLi technology',
                              epilog="// it's not that great, actually.")
-
-def anyint(s):
-    return int(s, 0)
 
 ap.add_argument('--device',
                 help='Specify a path to the JieLi disk (e.g. /dev/sg2 or \\\\.\\E:), ' +
@@ -36,8 +34,6 @@ JL_chips        = yaml.load(open(dataroot/'chips.yaml'),        Loader=yaml.Safe
 JL_usb_loaders  = yaml.load(open(dataroot/'usb-loaders.yaml'),  Loader=yaml.SafeLoader)
 JL_uart_loaders = yaml.load(open(dataroot/'uart-loaders.yaml'), Loader=yaml.SafeLoader)
 
-print('** %d chips, %d USB loaders, %d UART loaders **' % (len(JL_chips), len(JL_usb_loaders), len(JL_uart_loaders)))
-
 ###### ###### ###### ###### ###### ###### ###### ###### ###### ###### ######
 
 # XXX: this is specific to V2 loaders.
@@ -58,8 +54,6 @@ dev_type_strs = {
     0x17: 'SPI NOR flash on SPI1',
 }
 
-
-
 def makebar(ratio, length):
     bratio = int(ratio * length)
 
@@ -72,71 +66,6 @@ def makebar(ratio, length):
     bar += ' ' * (length - bratio)
 
     return bar
-
-
-#
-# Well, yeah, that's cool but do we really need this?
-#
-def print_largeletters(string):
-    string = string.upper()
-
-    chars = {
-        '0': (r'  _____ ', r' |   / |', r' |  /  |', r' |_/___|'),
-        '1': (r'    _   ', r'   /|   ', r'    |   ', r'  __|__ '),
-        '2': (r'  _____ ', r' |     |', r'  _____|', r' |______'),
-        '3': (r'  _____ ', r'    ___|', r'       |', r' ______|'),
-        '4': (r'        ', r' |    | ', r' |____|_', r'      | '),
-        '5': (r'  ______', r' |_____ ', r'       |', r' ______|'),
-        '6': (r'  ______', r' |_____ ', r' |     |', r' |_____|'),
-        '7': (r'  _____ ', r' |     |', r'       |', r'       |'),
-        '8': (r'  _____ ', r' |_____|', r' |     |', r' |_____|'),
-        '9': (r'  _____ ', r' |     |', r' |_____|', r' ______|'),
-        'A': (r'  _____ ', r' |_____|', r' |     |', r' |     |'),
-        'B': (r'  ______', r' |_____/', r' |     |', r' |_____|'),
-        'C': (r'  _____ ', r' |     |', r' |      ', r' |______'),
-        'D': (r'  _____ ', r' |     |', r' |     |', r' |____/ '),
-        'E': (r'  ______', r' |_____ ', r' |      ', r' |______'),
-        'F': (r'  ______', r' |_____ ', r' |      ', r' |      '),
-        'G': (r'  _____ ', r' |      ', r' |  ___ ', r' |_____|'),
-        'H': (r'        ', r' |_____|', r' |     |', r' |     |'),
-        'I': (r' _______', r'    |   ', r'    |   ', r' ___|___'),
-        'J': (r'    ___ ', r'       |', r'       |', r' |_____|'),
-        'K': (r'        ', r' |___/  ', r' |   \  ', r' |     \\'),
-        'L': (r'        ', r' |      ', r' |      ', r' |_____|'),
-        'M': (r' ______ ', r' |  |  |', r' |     |', r' |     |'),
-        'N': (r'        ', r' |\    |', r' |  \  |', r' |    \|'),
-        'O': (r'  _____ ', r' |     |', r' |     |', r' |_____|'),
-        'P': (r'  ______', r' |_____/', r' |      ', r' |      '),
-        'Q': (r'  _____ ', r' |     |', r' |   \ |', r' |____\|'),
-        'R': (r'  ______', r' |_____/', r' |     |', r' |     |'),
-        'S': (r' _______', r' \_____ ', r'       |', r' ______|'),
-        'T': (r' _______', r'    |   ', r'    |   ', r'    |   '),
-        'U': (r'        ', r' |     |', r' |     |', r' |_____|'),
-        'V': (r'        ', r' |     |', r'  \   / ', r'   \_/  '),
-        'W': (r'        ', r' |     |', r' |  |  |', r' |__|__|'),
-        'X': (r'        ', r' \     /', r'  >---< ', r' /     \\'),
-        'Y': (r'        ', r' |     |', r' |_____|', r' ______|'),
-        'Z': (r' _______', r'    ___/', r'   /    ', r' _/_____'),
-    }
-
-    height = 0
-
-    for c in string:
-        char = chars.get(c, [])
-        height = max(height, len(char))
-
-    for line in range(height):
-        ln = ''
-
-        for c in string:
-            char = chars.get(c, [])
-
-            if line >= len(char): continue
-            ln += char[line]
-
-        print(ln)
-
-    print()
 
 ###### ###### ###### ###### ###### ###### ###### ###### ###### ###### ######
 
@@ -174,30 +103,6 @@ class DasShell(cmd.Cmd):
 
     #------#------#------#------#------#------#------#------#------#------#
 
-    def do_chipkey(self, args):
-        """Read the chip key from the chip
-        chipkey
-        """
-
-        try:
-            key = self.dev.chip_key()
-        except SCSIException:
-            print("Failed to get the chip key")
-            return
-
-        print('Your chip key is:')
-
-        print_largeletters('%04X' % key)
-
-        if key == 0xffff:
-            print("Chip key is blank! You're good to go.")
-        elif key == 0x0000:
-            print("Chip key bits seem to be fully burnt out.")
-            print("Did something go wrong? Or that's what it is supposed to be?")
-        else:
-            nbits = bin(key).count('1')
-            print("- %d bits are still intact." % nbits)
-
     def do_burnchipkey(self, args):
         """ Burn the chipkey into the chip
         burnchipkey <key>
@@ -222,11 +127,8 @@ class DasShell(cmd.Cmd):
             print("Failed to get the chip key")
             return
 
-        print('Your current chip key:')
-        print_largeletters('%04X' % key)
-
-        print("Chip key you're going to burn:")
-        print_largeletters('%04X' % newkey)
+        print(f'Current chipkey: >>> 0x{key:04X} <<<')
+        print(f'New chipkey:     >>> 0x{newkey:04X} <<<')
 
         realkey = newkey & key
 
@@ -258,7 +160,7 @@ class DasShell(cmd.Cmd):
                 print("Hmmm... You really think you can clear the chipkey?")
 
             elif newkey == 0x0000:
-                print("Oh, so you want to burn the remaining bits to death? Do you?")
+                print("Oh, so you want to burn out all of the remaining bits too, right?")
 
             elif key == newkey:
                 print("This chipkey is already burnt into the chip.")
@@ -269,14 +171,11 @@ class DasShell(cmd.Cmd):
                     print("This key can be successfully written. Do you want to proceed?")
 
                 else:
-                    print("Well, this key won't be written as you think it will.")
+                    print("Well, the chip already has a key burnt into it, and your provided key couldn't be written properly.")
+                    print(f"Here's what you might get instead: >>> 0x{realkey:04X} <<<")
+                    print('Do you still want to proceed?')
 
-                    print("That's what you get instead:")
-                    print_largeletters('%04X' % realkey)
-
-                    print("\nDo you still want to proceed?")
-
-        # silly approach to confirming a possibly-dangerous task.
+        # silly approach to confirming a possibly-"dangerous" task.
         answer = input('Say "yes i do" to proceed: ')
         if answer.strip().lower() != 'yes i do':
             print("You didn't answer correctly. Aborting")
@@ -288,55 +187,19 @@ class DasShell(cmd.Cmd):
             print("Failed to burn chipkey!")
             return
 
-        print("Command result: 0x%08x" % result)
-        print("Current chipkey: %04x" % self.dev.chip_key())
+        print(f'Command result: [{result:08X}]')
 
-    def do_onlinedev(self, args):
-        """Get the device type and info we're working with
-        onlinedev
-        """
+        curkey = self.dev.chip_key()
+        print(f'Current chipkey: >>> 0x{curkey:04X} <<<')
 
-        try:
-            info = self.dev.online_device()
-        except SCSIException:
-            print("Failed to get the online device info")
-            return
-
-        print('Device type:\n  0x%02x [%s]' % (info['type'], dev_type_strs.get(info['type'])))
-        print("\nDevice ID:")
-        print_largeletters('%08X' %  info['id'])
-
-    def do_execcmd(self, args):
-        """Execute an arbitrary loader command (those which do not transfer any data, but simply return a response)
-        execcmd <opcode> [<arg bytes>]
-        """
-
-        args = args.split(maxsplit=1)
-
-        if len(args) < 1:
-            print("Not enough arguments!")
-            self.do_help('execcmd')
-            return
-
-        try:
-            opcode = int(args[0], 0) & 0xffff
-        except ValueError:
-            print("<opcode> [%s] is not a number!" % args[0])
-            return
-
-        try:
-            data = bytes.fromhex(args[1])
-        except IndexError:
-            data = b''
-        except ValueError:
-            print('Wrong hex string "%s"!' % args[1])
-            return
-
-        try:
-            resp = self.dev.cmd_exec(opcode, data, check_response=True)
-            print('Response: %04x / [%s]' % (resp[0], resp[1].hex(' ')))
-        except Exception as e:
-            print("Command execution failed: ", e)
+        if curkey == key:
+            print('Seems like nothing have happened.')
+        elif curkey == realkey and realkey != newkey:
+            print('As it have been predicted.')
+        elif curkey == newkey:
+            print('Done!')
+        else:
+            print('Something did change...')
 
     #------#------#------#------#------#------#------#------#------#------#
 
@@ -573,7 +436,7 @@ class DasShell(cmd.Cmd):
         while length > 0:
             n = min(length, self.buffsize)
 
-            hexdump(self.dev.flash_read(address, n), address=address)
+            hexdump(self.dev.flash_read(address, n), base=address)
 
             address += n
             length -= n
@@ -719,7 +582,7 @@ class DasShell(cmd.Cmd):
         while length > 0:
             n = min(length, 256) # FIXME: same deal
 
-            hexdump(self.dev.mem_read(address, n), address=address)
+            hexdump(self.dev.mem_read(address, n), base=address)
 
             address += n
             length -= n
@@ -897,7 +760,7 @@ with JL_MSCDevice(device) as dev:
 
                 else:
                     if menglicrypt:
-                        block = jl_crypt_mengli(block)
+                        block = cipher_bytes(jl_crc_cipher, block)
 
                     uboot.mem_write(addr, block)
 
@@ -915,11 +778,11 @@ with JL_MSCDevice(device) as dev:
 
                 if ldrcrypt == 'RxGp':
                     # Decrypt this block in order to check it with an ordinary memory read command
-                    block = jl_crypt_rxgp(block)
+                    block = cipher_bytes(jl_rxgp_cipher, block)
 
                 elif menglicrypt:
                     # if it is mengli encrypted or the mem_read returns it this way, then de/encrypt it.
-                    block = jl_crypt_mengli(block)
+                    block = cipher_bytes(jl_crc_cipher, block)
 
                 rblock = uboot.mem_read(addr, len(block))
                 if block != rblock:

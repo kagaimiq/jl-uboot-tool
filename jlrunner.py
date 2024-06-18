@@ -1,5 +1,5 @@
-from jl_stuff import *
-from jl_uboot import JL_MSCDevice, JL_UBOOT
+from jltech.uboot import JL_MSCDevice, JL_UBOOT
+from jltech.cipher import jl_crc_cipher, cipher_bytes
 import argparse, struct
 
 ap = argparse.ArgumentParser(description='Load code into memory and execute it')
@@ -51,11 +51,11 @@ with JL_MSCDevice(device) as dev:
 
     def mem_read(addr, size):
         data = uboot.mem_read(addr, size)
-        if args.encrypt: data = jl_crypt_mengli(data)
+        if args.encrypt: data = cipher_bytes(jl_crc_cipher, data)
         return data
 
     def mem_write(addr, data):
-        if args.encrypt: data = jl_crypt_mengli(data)
+        if args.encrypt: data = cipher_bytes(jl_crc_cipher, data)
         uboot.mem_write(addr, data)
 
     #----------------------------------------------------

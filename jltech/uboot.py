@@ -1,6 +1,7 @@
 from scsiio import SCSIDev
 from scsiio.common import SCSIException
-from jl_stuff import *
+from jltech.crc import jl_crc16
+from jltech.cipher import jl_crc_cipher, cipher_bytes
 import os, time
 
 class JL_MSCDevice:
@@ -100,11 +101,9 @@ class JL_MSCProtocolBase:
         """ Prepare command's CDB """
         cdb = cmd.to_bytes(2, 'big') + args
 
-        # if the cdb length is less than 16, then we'll just fill with 0xff's
+        # pad the rest of CDB with 0xFF's
         if len(cdb) < 16:
             cdb += b'\xff' * (16 - len(cdb))
-
-        #print('!! CDB PREPARE !!', '[%04x]' % cmd, '+', '{'+args.hex('.')+'}', '=', '{'+cdb.hex('.')+'}')
 
         return cdb
 
@@ -115,8 +114,6 @@ class JL_MSCProtocolBase:
 
         rcmd = int.from_bytes(resp[:2], 'big')
         resp = bytes(resp[2:])
-
-        #print('!! RESPONSE !!', '[%04x]' % rcmd, '+', '{'+resp.hex('.')+'}')
 
         if check_response:
             # Check if the command in response matched the sent one
@@ -390,7 +387,7 @@ class JL_LoaderV2(JL_MSCProtocolBase):
     def chip_key(self, arg=0xac6900):
         """ Read (chip)key """
         resp = self.cmd_exec(JL_LoaderV2.Cmd.READ_KEY, arg.to_bytes(4, 'big'))
-        return int.from_bytes(jl_crypt_mengli(resp[4:6][::-1]), 'little')
+        return int.from_bytes(cipher_bytes(jl_crc_cipher, resp[4:6][::-1]), 'little')
 
     def online_device(self):
         """ Get online device """
