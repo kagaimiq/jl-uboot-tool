@@ -2,8 +2,13 @@ from scsiio.common import SCSIException
 from jltech.uboot import JL_MSCDevice, JL_UBOOT, JL_LoaderV2, JL_LoaderV1
 from jltech.cipher import cipher_bytes, jl_crc_cipher, jl_rxgp_cipher
 from jltech.utils import *
-import argparse, cmd, time
-import pathlib, yaml
+from tqdm import tqdm
+from pathlib import Path
+import argparse
+import cmd
+import yaml
+
+###############################################################################
 
 ap = argparse.ArgumentParser(description='JieLi UBOOT tool - the swiss army knife for JieLi technology',
                              epilog="// it's not that great, actually.")
@@ -25,16 +30,16 @@ ap.add_argument('--custom-loaders', metavar='FILE',
 
 args = ap.parse_args()
 
-###### ###### ###### ###### ###### ###### ###### ###### ###### ###### ######
+###############################################################################
 
-scriptroot = pathlib.Path(__file__).parent
+scriptroot = Path(__file__).parent
 dataroot   = scriptroot/'data'
 
 JL_chips        = yaml.load(open(dataroot/'chips.yaml'),        Loader=yaml.SafeLoader)
 JL_usb_loaders  = yaml.load(open(dataroot/'usb-loaders.yaml'),  Loader=yaml.SafeLoader)
 JL_uart_loaders = yaml.load(open(dataroot/'uart-loaders.yaml'), Loader=yaml.SafeLoader)
 
-###### ###### ###### ###### ###### ###### ###### ###### ###### ###### ######
+###############################################################################
 
 # XXX: this is specific to V2 loaders.
 dev_type_strs = {
@@ -54,20 +59,7 @@ dev_type_strs = {
     0x17: 'SPI NOR flash on SPI1',
 }
 
-def makebar(ratio, length):
-    bratio = int(ratio * length)
-
-    bar = ''
-
-    if bratio > 0:
-        bar += '=' * (bratio - 1)
-        bar += '>'
-
-    bar += ' ' * (length - bratio)
-
-    return bar
-
-###### ###### ###### ###### ###### ###### ###### ###### ###### ###### ######
+###############################################################################
 
 class DasShell(cmd.Cmd):
     intro = \
@@ -204,79 +196,61 @@ class DasShell(cmd.Cmd):
     #------#------#------#------#------#------#------#------#------#------#
 
     def flash_erase(self, address, length):
-        dlength = 0
+        # align the address and length to the small eraseblock boundary
+        saddr = address & ~0xFFF
+        eaddr = (address + length + 0xFFF) & ~0xFFF
 
-        while length > 0:
-            if length >= 0x10000 and (address & 0xffff) == 0:
-                block = 0x10000
-            else:
-                block = 0x1000
+        tq = tqdm(desc='Erasing', total=(eaddr-saddr), unit='B', unit_scale=True, unit_divisor=1024)
 
-            n = min(length, block - (address % block))
+        try:
+            address = saddr
+            while address < eaddr:
+                if (address & 0xFFFF) == 0 and (eaddr-address) >= 0x10000:
+                    # erase a large block (64k)
+                    blocksize = 0x10000
+                    self.dev.flash_erase_block(address)
+                else:
+                    # erase a small block (4k)
+                    blocksize = 0x1000
+                    self.dev.flash_erase_sector(address)
 
-            #print("\rErasing %x-%x..." % (address, address + length - 1), end='', flush=True)
+                address += blocksize
+                tq.update(blocksize)
 
-            t = time.time()
-            if block > 0x1000: self.dev.flash_erase_block(address)
-            else:              self.dev.flash_erase_sector(address)
-            t = time.time() - t
-
-            length -= n
-            dlength += n
-
-            ratio = dlength / (dlength + length)
-            print("\rErasing %08x [%s] %3d%%" % (address, makebar(ratio, 40), ratio * 100), end='')
-            print(" %.2f KB/s" % ((block / 1000 / t) if t > 0 else 0), end='', flush=True)
-
-            address += n
-
-        print()
+        finally:
+            tq.close()
 
     def flash_write_file(self, address, length, fil):
-        dlength = 0
+        tq = tqdm(desc='Writing', total=length, unit='B', unit_scale=True, unit_divisor=1024)
 
-        while length > 0:
-            block = fil.read(self.buffsize)
-            if block == b'': break
-            n = len(block)
+        try:
+            while length > 0:
+                data = fil.read(min(length, self.buffsize))
+                if data == b'': break
 
-            t = time.time()
-            self.dev.flash_write(address, block)
-            t = time.time() - t
+                self.dev.flash_write(address, data)
 
-            length -= n
-            dlength += n
+                length -= len(data)
+                address += len(data)
+                tq.update(len(data))
 
-            ratio = dlength / (dlength + length)
-            print("\rWriting %08x [%s] %3d%%" % (address, makebar(ratio, 40), ratio * 100), end='')
-            print(" %.2f KB/s" % ((len(block) / 1000 / t) if t > 0 else 0), end='', flush=True)
-
-            address += n
-
-        print()
+        finally:
+            tq.close()
 
     def flash_read_file(self, address, length, fil):
-        dlength = 0
+        tq = tqdm(desc='Reading', total=length, unit='B', unit_scale=True, unit_divisor=1024)
 
-        while length > 0:
-            n = min(self.buffsize, length)
+        try:
+            while length > 0:
+                data = self.dev.flash_read(address, min(length, self.buffsize))
+                fil.write(data)
 
-            t = time.time()
-            data = self.dev.flash_read(address, n)
-            t = time.time() - t
+                length -= len(data)
+                address += len(data)
+                tq.update(len(data))
 
-            fil.write(data)
-
-            length -= n
-            dlength += n
-
-            ratio = dlength / (dlength + length)
-            print("\rReading %08x [%s] %3d%%" % (address, makebar(ratio, 40), ratio * 100), end='')
-            print(" %.2f KB/s" % ((len(data) / 1000 / t) if t > 0 else 0), end='', flush=True)
-
-            address += n
-
-        print()
+        finally:
+            tq.close()
 
     #-------------------------------------
 
@@ -313,7 +287,6 @@ class DasShell(cmd.Cmd):
             return
 
         with fil:
-            print()
             self.flash_read_file(address, length, fil)
 
     #-------------------------------------
@@ -346,8 +319,6 @@ class DasShell(cmd.Cmd):
             fil.seek(0, 2)
             length = fil.tell()
             fil.seek(0)
-
-            print()
 
             self.flash_erase(address, length)
             self.flash_write_file(address, length, fil)
@@ -398,8 +369,6 @@ class DasShell(cmd.Cmd):
         except ValueError:
             print("<length> [%s] is not a number!" % args[1])
             return
-
-        print()
 
         self.flash_erase(address, length)
 
@@ -474,27 +443,15 @@ class DasShell(cmd.Cmd):
             return
 
         with fil:
-            dlength = 0
-
             while length > 0:
                 n = min(256, length) # FIXME: the BR25 loader doesn't like reading more than 256+15 bytes!
 
-                t = time.time()
                 data = self.dev.mem_read(address, n)
-                t = time.time() - t
 
                 fil.write(data)
 
                 length -= n
-                dlength += n
-
-                ratio = dlength / (dlength + length)
-                print("\rReading %08x [%s] %3d%%" % (address, makebar(ratio, 40), ratio * 100), end='')
-                print(" %.2f KB/s" % ((len(data) / 1000 / t) if t > 0 else 0), end='', flush=True)
-
                 address += n
-
-            print()
 
     #-------------------------------------
 
@@ -527,27 +484,15 @@ class DasShell(cmd.Cmd):
             length = fil.tell()
             fil.seek(0)
 
-            dlength = 0
-
             while length > 0:
                 block = fil.read(256) # FIXME: same deal
                 if block == b'': break
                 n = len(block)
 
-                t = time.time()
                 self.dev.mem_write(address, block)
-                t = time.time() - t
 
                 length -= n
-                dlength += n
-
-                ratio = dlength / (dlength + length)
-                print("\rWriting %08x [%s] %3d%%" % (address, makebar(ratio, 40), ratio * 100), end='')
-                print(" %.2f kB/s" % ((len(block) / 1000 / t) if t > 0 else 0), end='', flush=True)
-
                 address += n
-
-            print()
 
     #-------------------------------------
 
@@ -650,7 +595,7 @@ class DasShell(cmd.Cmd):
             print("<!> Exiting..", e)
             return True
 
-###### ###### ###### ###### ###### ###### ###### ###### ###### ###### ######
+###############################################################################
 
 if args.device is not None:
     device = args.device
@@ -715,7 +660,7 @@ with JL_MSCDevice(device) as dev:
 
             else:
                 loaderspec = custom_loaderspecs[chipname]['usb']
-                loaderroot = pathlib.Path(args.custom_loaders).parent
+                loaderroot = Path(args.custom_loaders).parent
 
         #
         # If we didn't load the custom loader specs, then try to use the builtin one..
