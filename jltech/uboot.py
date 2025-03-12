@@ -424,10 +424,10 @@ class JL_LoaderV2(JL_MSCProtocolBase):
                         addr.to_bytes(4, 'big') + len.to_bytes(2, 'big'))
         return int.from_bytes(resp[:2], 'big')
 
-    def write_chipkey(self, key):
+    def write_chipkey(self, key, vpp=5000):
         """ Write (chip)key """
         resp = self.cmd_exec(JL_LoaderV2.Cmd.WRITE_KEY,
-                                                key.to_bytes(4, 'big'))
+                    key.to_bytes(4, 'big') + b'\x00' + vpp.to_bytes(4, 'big'))
         return int.from_bytes(resp[:4], 'big')
 
     def flash_crc16_raw(self, addr, len):
