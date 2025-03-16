@@ -1,16 +1,14 @@
 from jltech.uboot import JL_MSCDevice, JL_UBOOT
 from jltech.cipher import jl_crc_cipher, cipher_bytes
+from jltech.utils import anyint, hexdump
 import argparse, struct
 
 ap = argparse.ArgumentParser(description='Load code into memory and execute it')
 
-def anyint(s):
-    return int(s, 0)
-
 ap.add_argument('--device',
                 help='Path to the JieLi disk (e.g. /dev/sg2 or \\\\.\\E:)')
 
-ap.add_argument('--arg', type=anyint, default=0x4777,
+ap.add_argument('--arg', type=anyint, default=0,
                 help="Numerical argument that's passed to the code (default: 0x%(default)04x)")
 
 ap.add_argument('--encrypt', action='store_true',
@@ -18,12 +16,15 @@ ap.add_argument('--encrypt', action='store_true',
                      "have encrypted loaders and so they decrypt it as it goes in. "
                      "This will be replaced with --raw parameter that will pass the data as-is instead.")
 
-ap.add_argument('--block-size', default='512', metavar='SIZE',
-                help="Size of the block that is used when transferring data to the chip. (default = %(default)s)"
+ap.add_argument('--block-size', type=anyint, default=512, metavar='SIZE',
+                help="Size of the block that is used when transferring data to the chip. (default = %(default)d bytes)"
                      " Please keep in mind that encrypted loaders usually use a block size of 512 bytes. ")
 
 ap.add_argument('--mitraddr', type=anyint,
                 help='Address of the "MiZUTraX" thing to dump after execution')
+
+ap.add_argument('--dumpaddr', type=anyint,
+                help='hexdump the memory at the specified address (256 bytes)')
 
 ap.add_argument('address', type=anyint,
                 help="Address where the file will be loaded and executed from")
@@ -64,9 +65,8 @@ with JL_MSCDevice(device) as dev:
         addr = args.address
 
         while True:
-            block = f.read(int(args.block_size, 0))
+            block = f.read(args.block_size)
             if block == b'': break
-
             mem_write(addr, block)
             addr += len(block)
 
@@ -80,6 +80,9 @@ with JL_MSCDevice(device) as dev:
         exit(1)
 
     #----------------------------------------------------
+
+    if args.dumpaddr:
+        hexdump(mem_read(args.dumpaddr, 0x100))
 
     def mitrparse(addr):
         magic, buffaddr, buffsize, nbytes = struct.unpack('<8sIII', mem_read(addr, 8+12))
