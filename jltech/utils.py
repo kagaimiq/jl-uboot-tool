@@ -30,10 +30,10 @@ def hexdump(data, width=16, off=0, size=None, base=0):
         #
         line = bytearray(line + (b' ' * (width - len(line))))
         for i, b in enumerate(line):
-            if b < 0x20: # or b >= 0x7F:
+            if b < 0x20 or b >= 0x7F:
                 line[i] = ord('.')
 
-        txtline = line.decode('1251', errors='replace')  # 1251 rocks!
+        txtline = line.decode()
 
         print('%08x:%s %s' % (off+base, hexline, txtline))
 
