@@ -1,3 +1,4 @@
 crcmod
 pyyaml
 pycryptodomex
+tqdm
