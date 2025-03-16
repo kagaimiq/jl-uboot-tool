@@ -65,7 +65,7 @@ def find_jl_devices(venfilter=None):
                 revision = str(inquiry[32:36], 'ascii').strip()
 
                 if venfilter is not None:
-                    if vendor.lower() != venfilter.lower():
+                    if vendor.casefold() != venfilter.casefold():
                         continue
 
                 # TODO: filter based on the 'vendor', not on 'product', we don't want any wrong false-positive
