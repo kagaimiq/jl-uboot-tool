@@ -2,31 +2,41 @@ from scsiio.common import SCSIException
 from jltech.uboot import JL_MSCDevice, JL_UBOOT, JL_LoaderV2, JL_LoaderV1
 from jltech.cipher import cipher_bytes, jl_crc_cipher, jl_rxgp_cipher
 from jltech.utils import *
+
+from scsiio import SCSIDev
+
 from tqdm import tqdm
 from pathlib import Path
+
 import argparse
 import cmd
 import yaml
 
 ###############################################################################
 
-ap = argparse.ArgumentParser(description='JieLi UBOOT tool - the swiss army knife for JieLi technology',
-                             epilog="// it's not that great, actually.")
+ap = argparse.ArgumentParser(description='JieLi UBOOT tool - a tool to interact with the USB bootloader in JieLi chips.')
 
-ap.add_argument('--device',
-                help='Specify a path to the JieLi disk (e.g. /dev/sg2 or \\\\.\\E:), ' +
-                     'if not specified, then it tries to search for devices.')
+ap.add_argument('--device', help='Path to a JieLi "UBOOT/DEVICE/UDISK" disk device, e.g. "/dev/sg2" or "\\\\.\\E:"')
+
+ap.add_argument('--chip', help='Narrow down the search/match to a specific chip family e.g. "BR17" or series name e.g. "ac690n"')
+
+ap.add_argument('--arg-target', type=int, metavar='VAL', default=1, choices=range(16),
+                help='Target memory type [0:SDRAM, 1/4: SPI NOR, 2/5: SPI NAND, 7: OTP]; default is %(default)d')
+
+ap.add_argument('--arg-clkdiv', type=int, metavar='VAL', default=0, choices=range(256),
+                help='Clock divider [0: default, 1..255 = div 1..255]; default is %(default)d')
+
+ap.add_argument('--arg-spimode', type=int, metavar='VAL', default=0, choices=range(4),
+                help='SPI mode [0: "3-wire" half-duplex, 1: "4-wire" full-duplex, 2: DSPI, 3: QSPI]; default is %(default)d')
 
 ap.add_argument('--loader-arg', type=anyint, metavar='ARG',
-                help="Loader's argument (overrides the default).\n" +
-                     "Hint: usually, the argument is parsed by the loader as follows:\n" +
-                     "  bit0-3: Target memory (1 = SPI flash, 7 = OTP),\n" +
-                     "  bit4-11: Clock divider (0 = default, >0 = 1/n) - base is usually 48 MHz,\n" +
-                     "  bit12-13: SPI mode (0 = half-duplex (2-wire) SPI, 1 = duplex (3-wire) SPI, 2 = DSPI, 3 = QSPI)")
+                help="Loader's argument (overrides one set with the '--arg-xxx' arguments above)."
+                     " '--arg-target' defines bits 0-3, '--arg-clkdiv' defines bits 4-11 and '--arg-spimode' defines bits 12-13.")
 
-ap.add_argument('--custom-loaders', metavar='FILE',
-                help='Path to the custom loader spec YAML file. ' +
-                     'If something goes wrong when loading it, then the builtin loader spec is used.')
+ap.add_argument('cmds', nargs='*',
+                help='Commands to run (as if they were typed into an interactive shell).'
+                     ' The shell itself is not going to be executed if the commands were specified there.'
+                     ' Finally a solution for using it in automated build enviroments! (sort of)')
 
 args = ap.parse_args()
 
@@ -39,25 +49,19 @@ JL_chips        = yaml.load(open(dataroot/'chips.yaml'),        Loader=yaml.Safe
 JL_usb_loaders  = yaml.load(open(dataroot/'usb-loaders.yaml'),  Loader=yaml.SafeLoader)
 JL_uart_loaders = yaml.load(open(dataroot/'uart-loaders.yaml'), Loader=yaml.SafeLoader)
 
-###############################################################################
 
-# XXX: this is specific to V2 loaders.
-dev_type_strs = {
-    0x00: 'None',
-    0x01: 'SDRAM',
-    0x02: 'SD card',
-    0x03: 'SPI NOR flash on SPI0',
-    0x04: 'SPI NAND flash on SPI0',
-    0x05: 'OTP',
-    0x10: 'SD card 2',
-    0x11: 'SD card 3',
-    0x12: 'SD card 4',
-    0x13: 'Something 0x13',
-    0x14: 'Something 0x14',
-    0x15: 'Something 0x15',
-    0x16: 'SPI NOR flash on SPI1',
-    0x17: 'SPI NOR flash on SPI1',
-}
+def get_chip_name(name):
+    # try searching by the family name
+    fname = name.lower()
+    if fname in JL_chips:
+        return fname
+
+    # now try to search by the series name
+    for fname in JL_chips:
+        if name.upper() in JL_chips[fname]['name']:
+            # there it is
+            return fname
+
 
 ###############################################################################
 
@@ -81,9 +85,14 @@ class DasShell(cmd.Cmd):
         self.dev = dev
 
         try:
-            self.buffsize = self.dev.usb_buffer_size()
+            self.flash_io_max = self.dev.usb_buffer_size()
         except:
-            self.buffsize = 512
+            self.flash_io_max = 512
+
+        # FIXME: new loaders (br23+) use a very small buffer (just 256 bytes long) for *all* I/O,
+        #  and the memory operations will happily overwrite past this buffer, while the flash I/O won't.
+        self.mem_io_max = 256
+
 
     def emptyline(self):
         pass
@@ -225,7 +234,7 @@ class DasShell(cmd.Cmd):
 
         try:
             while length > 0:
-                data = fil.read(min(length, self.buffsize))
+                data = fil.read(min(length, self.flash_io_max))
                 if data == b'': break
 
                 self.dev.flash_write(address, data)
@@ -242,7 +251,7 @@ class DasShell(cmd.Cmd):
 
         try:
             while length > 0:
-                data = self.dev.flash_read(address, min(length, self.buffsize))
+                data = self.dev.flash_read(address, min(length, self.flash_io_max))
                 fil.write(data)
 
                 length -= len(data)
@@ -403,7 +412,7 @@ class DasShell(cmd.Cmd):
             return
 
         while length > 0:
-            n = min(length, self.buffsize)
+            n = min(length, self.flash_io_max)
 
             hexdump(self.dev.flash_read(address, n), base=address)
 
@@ -444,7 +453,7 @@ class DasShell(cmd.Cmd):
 
         with fil:
             while length > 0:
-                n = min(256, length) # FIXME: the BR25 loader doesn't like reading more than 256+15 bytes!
+                n = min(length, self.mem_io_max)
 
                 data = self.dev.mem_read(address, n)
 
@@ -485,7 +494,7 @@ class DasShell(cmd.Cmd):
             fil.seek(0)
 
             while length > 0:
-                block = fil.read(256) # FIXME: same deal
+                block = fil.read(self.mem_io_max)
                 if block == b'': break
                 n = len(block)
 
@@ -525,7 +534,7 @@ class DasShell(cmd.Cmd):
             return
 
         while length > 0:
-            n = min(length, 256) # FIXME: same deal
+            n = min(length, self.mem_io_max)
 
             hexdump(self.dev.mem_read(address, n), base=address)
 
@@ -534,7 +543,7 @@ class DasShell(cmd.Cmd):
 
     #-------------------------------------
 
-    def memjump(self, args):
+    def do_memjump(self, args):
         """Execute code at a given address
         memjump <addr> [<arg>]
         
@@ -573,7 +582,7 @@ class DasShell(cmd.Cmd):
     #------#------#------#------#------#------#------#------#------#------#
 
     def do_reset(self, args):
-        """Reset the chip. (or "Run App")
+        """Reset the chip.
         reset [<arg>]
 
         If <arg> is not specified, then it will default to 1.
@@ -597,91 +606,81 @@ class DasShell(cmd.Cmd):
 
 ###############################################################################
 
+# XXX: this is specific to V2 loaders.
+dev_type_strs = {
+    0x00: 'None',
+    0x01: 'SDRAM',
+    0x02: 'SD card',
+    0x03: 'SPI NOR flash on SPI0',
+    0x04: 'SPI NAND flash on SPI0',
+    0x05: 'OTP',
+    0x10: 'SD card 2',
+    0x11: 'SD card 3',
+    0x12: 'SD card 4',
+    0x13: 'Something 0x13',
+    0x14: 'Something 0x14',
+    0x15: 'Something 0x15',
+    0x16: 'SPI NOR flash on SPI1',
+    0x17: 'SPI NAND flash on SPI1',
+}
+
+
 if args.device is not None:
-    device = args.device
+    # use the provided device path
+    devpath = args.device
 
 else:
+    # find and ask about the device to use
     from jldevfind import choose_jl_device
 
-    device = choose_jl_device()
-    if device is None:
+    if args.chip is not None:
+        filter = get_chip_name(args.chip)
+        if filter is None:
+            print(f'Unknown chip "{args.chip}"')
+            exit(1)
+    else:
+        filter = None
+
+    devpath = choose_jl_device(venfilter=filter)
+    if devpath is None:
         exit(1)
 
-with JL_MSCDevice(device) as dev:
+
+
+with JL_MSCDevice(devpath) as dev:
     vendor, product, prodrev = dev.inquiry()
 
     chipname = vendor.lower()
     if chipname not in JL_chips:
-        print("Chip '%s' is not supported, or it is invalid." % chipname)
+        print(f'"{chipname}" is not supported or it is not a JieLi chip.')
         exit(2)
 
     print()
 
     chipspec = JL_chips[chipname]
-    print('Chip: %s (%s series)' % (chipname.upper(), ', '.join(chipspec['name'])))
+    print(f'Chip: {chipname.upper()} - {"/".join(chipspec["name"])} series')
 
-    #
-    # Load the loader.
-    #   TODO: MUST be moved out somewhere, in order to reuse this in other tools as well.
-    #
-    uboot = JL_UBOOT(dev.dev)
+    #---------------------------
+
+    loader = JL_UBOOT(dev.dev)
 
     runtheloader = False
 
     if product == 'UBOOT1.00':
-        print("This is a UBOOT1.00 device, running the loader.")
         runtheloader = True
 
     if runtheloader:
-        custom_loaderspecs = None
+        if chipname not in JL_usb_loaders:
+            print(f'No loader available for "{chipname}".')
+            exit(3)
 
-        #
-        # Is there any custom loader spec passed?
-        #
-        if args.custom_loaders is not None:
-            print("Trying to use custom loader specs from [%s]..." % args.custom_loaders)
+        spec = JL_usb_loaders[chipname]
 
-            try:
-                custom_loaderspecs = yaml.load(open(args.custom_loaders), Loader=yaml.SafeLoader)
-            except Exception as e:
-                print("Something went wrong while loading the custom loader spec file:", e)
+        menglicrypt = False
 
-        #
-        # Is there a chip and its USB loader spec in the custom loader spec?
-        #
-        if custom_loaderspecs is not None:
-            if chipname not in custom_loaderspecs:
-                print("The custom loader spec does not contain definition for chip %s" % chipname)
-                custom_loaderspecs = None
-
-            elif 'usb' not in custom_loaderspecs[chipname]:
-                print("There is no USB loader in the custom loader spec for chip %s" % chipname)
-                custom_loaderspecs = None
-
-            else:
-                loaderspec = custom_loaderspecs[chipname]['usb']
-                loaderroot = Path(args.custom_loaders).parent
-
-        #
-        # If we didn't load the custom loader specs, then try to use the builtin one..
-        #
-        if custom_loaderspecs is None:
-            if chipname not in JL_usb_loaders:
-                print("There is no USB loader for chip %s" % chipname)
-                exit(3)
-
-            loaderspec = JL_usb_loaders[chipname]
-            loaderroot = dataroot
-
-        #
-        # Upload the loader!
-        #
-        with open(loaderroot/loaderspec['file'], 'rb') as f:
-            blocksz = loaderspec.get('blocksize', 512)
-
-            ldrcrypt = loaderspec.get('encryption')
-
-            menglicrypt = False
+        with open(dataroot / spec['file'], 'rb') as f:
+            block_size = spec.get('blocksize', 512)
+            cipher = spec.get('encryption', 'none')
 
             # does this chip's UBOOT1.00 accept data in mengli encrypted form?
             if 'uboot1.00' in chipspec:
@@ -689,68 +688,39 @@ with JL_MSCDevice(device) as dev:
                     menglicrypt = chipspec['uboot1.00']['quirks'].get('memory-rw-mengli-crypt') == True
 
             # shall we ever perform the mengli de/encryption?
-            menglicrypt = (not menglicrypt and ldrcrypt == 'MengLi') or (menglicrypt and ldrcrypt != 'MengLi')
+            menglicrypt = (not menglicrypt and cipher == 'MengLi') or (menglicrypt and cipher != 'MengLi')
 
-            #
-            # Write
-            #
-            addr = loaderspec['address']
+            # upload the loader
+            address = spec['address']
+
             while True:
-                block = f.read(blocksz)
+                block = f.read(block_size)
                 if block == b'': break
 
-                if ldrcrypt == 'RxGp':
+                if cipher == 'RxGp':
                     # just pass it into the dedicated memory write command
-                    uboot.mem_write_rxgp(addr, block)
+                    loader.mem_write_rxgp(address, block)
 
                 else:
                     if menglicrypt:
+                        # scramble with crc_cipher
                         block = cipher_bytes(jl_crc_cipher, block)
 
-                    uboot.mem_write(addr, block)
+                    loader.mem_write(address, block)
 
-                addr += len(block)
+                address += len(block)
 
-            f.seek(0)
-
-            #
-            # Verify
-            #
-            addr = loaderspec['address']
-            while True:
-                block = f.read(blocksz)
-                if block == b'': break
-
-                if ldrcrypt == 'RxGp':
-                    # Decrypt this block in order to check it with an ordinary memory read command
-                    block = cipher_bytes(jl_rxgp_cipher, block)
-
-                elif menglicrypt:
-                    # if it is mengli encrypted or the mem_read returns it this way, then de/encrypt it.
-                    block = cipher_bytes(jl_crc_cipher, block)
-
-                rblock = uboot.mem_read(addr, len(block))
-                if block != rblock:
-                    print('Mismatch at %08x!' % addr)
-                    break
-
-                addr += len(block)
-
-        if 'argument' not in loaderspec:
-            loaderspec['argument'] = (0<<12) | (4<<4) | (1<<0) # spi mode=0, div=4, mem=1 (spi nor)
 
         if args.loader_arg is not None:
-            print('Overriding the default loader argument (%04x) with %04x' % (loaderspec['argument'], args.loader_arg))
-            loaderspec['argument'] = args.loader_arg
+            spec['argument'] = args.loader_arg
+        else:
+            spec['argument'] = (args.arg_spimode << 12) | (args.arg_clkdiv << 4) | args.arg_target
 
-        if 'entry' not in loaderspec:
-            loaderspec['entry'] = loaderspec['address']
-
-        print("Running loader (loaded to 0x%(address)04x) on 0x%(entry)04x, with argument 0x%(argument)04x..." % loaderspec)
+        print(f'Running loader with argument 0x{spec["argument"]:04X}.')
 
         try:
-            uboot.mem_jump(loaderspec['entry'], loaderspec['argument'])
-            print("Loader ran successfully.")
+            loader.mem_jump(spec['address'], spec['argument'])
+            print('The Loader has been successfully installed.')
         except SCSIException:
             print("!! Failed to run the loader !!")
             exit(3)
@@ -764,64 +734,33 @@ with JL_MSCDevice(device) as dev:
     print()
     print('================ Quick info ==================')
     print('  ** %s (%s series) **' % (chipname.upper(), '/'.join(chipspec['name'])))  # redundant?
-    if isinstance(loader, JL_LoaderV2):
-        print('  Loader protocol: V2')
 
-        try:
-            print('  >> Chip key: 0x%04X <<' % loader.chip_key())
-        except SCSIException:
-            pass
+    try:
+        print('  >> Chip key: 0x%04X <<' % loader.chip_key())
+    except Exception:
+        print('  ** failed to get the chip key **')
 
-        try:
-            print('  - USB buffer size: %d bytes' % loader.usb_buffer_size())
-        except SCSIException:
-            pass
-
-        try:
-            ondev = loader.online_device()
-            print('  - Online device:')
-            print('     ID: 0x%06x' % ondev['id'])
-            print('     Type: 0x%02x (%s)' % (ondev['type'], dev_type_strs.get(ondev['type'], 'unknown')))
-        except SCSIException:
-            pass
-
-        try:
-            print('  - Another Device ID: 0x%08x' % loader.read_id())
-        except SCSIException:
-            pass
-
-        #try:
-        #    print('  - Status: 0x%02x' % loader.read_status())
-        #except SCSIException:
-        #    pass
-
-        #try:
-        #    print('  - MaskROM ID: 0x%08x' % loader.maskrom_id())
-        #except SCSIException:
-        #    pass
-
-    elif isinstance(loader, JL_LoaderV1):
-        print('  Loader protocol: V1')
-
-        try:
-            print('  - Device ID: 0x%08x' % loader.read_id())
-        except SCSIException:
-            pass
-
-        try:
-            print('  - Device type: 0x%02x' % loader.online_device())
-        except SCSIException:
-            pass
-
-    elif isinstance(loader, JL_UBOOT):
-        print('  Loader protocol: V2 MaskROM')
+    try:
+        ondev = loader.online_device()
+        print('  - Online device:')
+        print('     ID: 0x%06x' % ondev['id'])
+        print('     Type: 0x%02x (%s)' % (ondev['type'], dev_type_strs.get(ondev['type'], 'unknown')))
+    except Exception:
+        print('  ** failed to get the online device info **')
 
     print('==============================================')
-
 
     #
     # Let's enter the shell!
     #
     ds = DasShell(loader)
 
-    ds.cmdloop()
+    if len(args.cmds) > 0:
+        # just execute commands in order
+        for cmd in args.cmds:
+            if ds.onecmd(cmd):
+                print('**** interrupted ****')
+                break
+    else:
+        # enter the shell
+        ds.cmdloop()
